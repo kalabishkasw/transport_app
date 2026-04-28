@@ -39,7 +39,12 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'apps.accounts',
-    # Далі додаватимемо: customers, fleet, orders, routes, documents, finance, tracking, reports
+    'apps.customers',
+    'apps.fleet',
+    'apps.routes',
+    'apps.orders',
+    'apps.documents',
+    # Далі додаватимемо: finance, tracking, reports
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
