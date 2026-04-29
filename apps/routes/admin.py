@@ -47,7 +47,7 @@ class RouteAdmin(admin.ModelAdmin):
     def map_link(self, obj):
         if not obj.pk:
             return ''
-        url = reverse('routes:route_map', args=[obj.pk])
+        url = reverse('core:route_map', args=[obj.pk])
         return format_html('<a href="{}" target="_blank">🗺 Карта</a>', url)
 
     fieldsets = (

@@ -1,0 +1,49 @@
+{% load static %}
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <i class="bi bi-bus-front-fill"></i>
+        <span>TransAuto Travel</span>
+    </div>
+
+    <div class="sidebar-section">Огляд</div>
+    <a href="{% url 'core:dashboard' %}"
+       class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill"></i> Дашборд
+    </a>
+
+    <div class="sidebar-section">Операції</div>
+    <a href="{% url 'core:trips_list' %}"
+       class="nav-link {% if active_page == 'trips' %}active{% endif %}">
+        <i class="bi bi-calendar-event"></i> Рейси
+    </a>
+    <a href="{% url 'core:orders_list' %}"
+       class="nav-link {% if active_page == 'orders' %}active{% endif %}">
+        <i class="bi bi-receipt"></i> Замовлення
+    </a>
+
+    <div class="sidebar-section">Довідники</div>
+    <a href="{% url 'core:routes_list' %}"
+       class="nav-link {% if active_page == 'routes' %}active{% endif %}">
+        <i class="bi bi-signpost-split"></i> Маршрути
+    </a>
+    <a href="{% url 'core:vehicles_list' %}"
+       class="nav-link {% if active_page == 'vehicles' %}active{% endif %}">
+        <i class="bi bi-bus-front"></i> Автопарк
+    </a>
+    <a href="{% url 'core:drivers_list' %}"
+       class="nav-link {% if active_page == 'drivers' %}active{% endif %}">
+        <i class="bi bi-person-badge"></i> Водії
+    </a>
+    <a href="{% url 'core:customers_list' %}"
+       class="nav-link {% if active_page == 'customers' %}active{% endif %}">
+        <i class="bi bi-building"></i> Клієнти
+    </a>
+
+    <div class="sidebar-section">Система</div>
+    <a href="/" class="nav-link" target="_blank">
+        <i class="bi bi-globe"></i> Сайт для клієнтів
+    </a>
+    <a href="/admin/" class="nav-link" target="_blank">
+        <i class="bi bi-gear"></i> Адмінка Django
+    </a>
+</aside>

@@ -32,6 +32,7 @@ def route_map(request, route_id):
     has_coords = [s for s in stops_data if s['lat'] is not None and s['lng'] is not None]
 
     return render(request, 'routes/route_map.html', {
+        'active_page': 'routes',
         'route': route,
         'stops': stops_data,
         'stops_with_coords': has_coords,

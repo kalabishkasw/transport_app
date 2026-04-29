@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Водії | TransAuto Travel{% endblock %}
+{% block page_title %}Водії{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:300px;"
+           placeholder="Пошук за прізвищем, посвідченням, категорією...">
+    <select name="available" class="form-select" style="max-width:200px;">
+        <option value="">Усі</option>
+        <option value="1" {% if filters.available == '1' %}selected{% endif %}>Доступні</option>
+        <option value="0" {% if filters.available == '0' %}selected{% endif %}>Недоступні</option>
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:drivers_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/fleet/driver/add/" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Додати водія
+        </a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if drivers %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>ПІБ</th>
+                    <th>Телефон</th>
+                    <th>Посвідчення</th>
+                    <th>Категорії</th>
+                    <th>Дійсне до</th>
+                    <th>Паспорт до</th>
+                    <th>Медогляд до</th>
+                    <th>Громадянство</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in drivers %}
+                <tr>
+                    <td>
+                        <b>{{ d.user.last_name }} {{ d.user.first_name }}</b>
+                        {% if d.user.patronymic %}
+                            <div class="text-muted-2 small">{{ d.user.patronymic }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ d.user.phone|default:"—" }}</td>
+                    <td class="small">{{ d.license_number }}</td>
+                    <td>
+                        {% for cat in d.categories_list %}
+                            <span class="badge bg-light text-dark">{{ cat }}</span>
+                        {% endfor %}
+                    </td>
+                    <td class="small">{{ d.license_expiry|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="small">{{ d.passport_expiry|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="small">{{ d.medical_check_expiry|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="small">{{ d.nationality|default:"—" }}</td>
+                    <td>
+                        {% if d.is_available %}
+                            <span class="badge-status status-paid">Доступний</span>
+                        {% else %}
+                            <span class="badge-status status-cancelled">Зайнятий</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-person-badge"></i>
+        <div>Водіїв не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}

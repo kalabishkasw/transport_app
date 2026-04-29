@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Замовлення | TransAuto Travel{% endblock %}
+{% block page_title %}Замовлення{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:320px;"
+           placeholder="Пошук за номером, ПІБ, телефоном, клієнтом...">
+    <select name="status" class="form-select" style="max-width:220px;">
+        <option value="">Усі статуси</option>
+        {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:orders_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/orders/order/add/" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Нове замовлення</a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if orders %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Дата</th>
+                    <th>Рейс</th>
+                    <th>Контакт</th>
+                    <th>Клієнт</th>
+                    <th class="text-end">Квитки</th>
+                    <th class="text-end">Сума</th>
+                    <th>Статус</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td><b>{{ o.order_number }}</b></td>
+                    <td>
+                        <div>{{ o.created_at|date:"d.m.Y" }}</div>
+                        <div class="text-muted-2 small">{{ o.created_at|date:"H:i" }}</div>
+                    </td>
+                    <td>
+                        <a href="{% url 'core:trip_detail' o.trip.id %}" class="text-decoration-none">
+                            <b>{{ o.trip.route.code }}</b>
+                        </a>
+                        <div class="text-muted-2 small">{{ o.trip.departure_at|date:"d.m H:i" }}</div>
+                    </td>
+                    <td>
+                        <div>{{ o.contact_last_name }} {{ o.contact_first_name }}</div>
+                        <div class="text-muted-2 small">{{ o.contact_phone }}</div>
+                    </td>
+                    <td>{{ o.customer.name|default:"—" }}</td>
+                    <td class="text-end"><b>{{ o.tickets_total }}</b></td>
+                    <td class="text-end"><b>{{ o.total_price|floatformat:2 }}</b> {{ o.currency }}</td>
+                    <td><span class="badge-status status-{{ o.status }}">{{ o.get_status_display }}</span></td>
+                    <td class="text-end">
+                        <a href="{% url 'core:order_detail' o.id %}" class="btn btn-sm btn-soft-primary">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <div>Замовлень за вашими фільтрами не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}

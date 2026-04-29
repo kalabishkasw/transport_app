@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Рейси | TransAuto Travel{% endblock %}
+{% block page_title %}Рейси{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:280px;"
+           placeholder="Пошук за маршрутом, номером авто...">
+    <select name="status" class="form-select" style="max-width:200px;">
+        <option value="">Усі статуси</option>
+        {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="route" class="form-select" style="max-width:240px;">
+        <option value="">Усі маршрути</option>
+        {% for r in routes %}
+            <option value="{{ r.id }}" {% if filters.route == r.id|stringformat:"s" %}selected{% endif %}>{{ r.code }} · {{ r.name }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:trips_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/routes/trip/add/" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Новий рейс</a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if trips %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Маршрут</th>
+                    <th>Відправлення</th>
+                    <th>Транспорт</th>
+                    <th>Водій</th>
+                    <th class="text-end">Квитки</th>
+                    <th class="text-end">Ціна</th>
+                    <th>Статус</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trip in trips %}
+                <tr>
+                    <td>
+                        <b>{{ trip.route.code }}</b>
+                        <div class="text-muted-2 small">{{ trip.route.name }}</div>
+                    </td>
+                    <td>
+                        <div>{{ trip.departure_at|date:"d.m.Y" }}</div>
+                        <div class="text-muted-2 small">{{ trip.departure_at|date:"H:i" }}</div>
+                    </td>
+                    <td>
+                        <div>{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</div>
+                        <div class="text-muted-2 small">{{ trip.vehicle.registration_number }}</div>
+                    </td>
+                    <td>{{ trip.main_driver.user.last_name }} {{ trip.main_driver.user.first_name }}</td>
+                    <td class="text-end">
+                        <b>{{ trip.tickets_count }}</b>
+                        <span class="text-muted-2 small">/ {{ trip.vehicle.seats_total|default:"—" }}</span>
+                    </td>
+                    <td class="text-end">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</td>
+                    <td><span class="badge-status status-{{ trip.status }}">{{ trip.get_status_display }}</span></td>
+                    <td class="text-end">
+                        <a href="{% url 'core:trip_detail' trip.id %}" class="btn btn-sm btn-soft-primary">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-calendar-x"></i>
+        <div>Рейсів за вашими фільтрами не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}

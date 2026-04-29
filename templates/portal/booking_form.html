@@ -1,0 +1,177 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Бронювання | {{ trip.route.name }}{% endblock %}
+
+{% block content %}
+
+<section class="section-sm bg-light">
+    <div class="container">
+        <a href="{% url 'portal:trip_detail' trip.id %}" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left"></i> До рейсу
+        </a>
+        <h2 class="mt-2 mb-1">Оформлення бронювання</h2>
+        <div class="text-muted">
+            {{ trip.route.name }} · {{ trip.departure_at|date:"d.m.Y H:i" }}
+        </div>
+    </div>
+</section>
+
+<section class="section-sm">
+<div class="container">
+<form method="post" id="booking-form">
+    {% csrf_token %}
+    <input type="hidden" name="count" id="count-input" value="{{ count }}">
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-people text-primary"></i> Кількість пасажирів</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for n in count_options %}
+                        <button type="button"
+                                data-count="{{ n }}"
+                                class="btn count-btn {% if n == count %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                onclick="changeCount({{ n }})">
+                            {{ n }}
+                        </button>
+                    {% endfor %}
+                </div>
+                <div class="text-muted small mt-2">Доступно {{ free }} вільних місць</div>
+            </div>
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-geo-alt text-primary"></i> Маршрут поїздки</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Місце посадки</label>
+                        <select name="boarding_stop" class="form-select" required>
+                            <option value="">— Оберіть —</option>
+                            {% for s in boarding_options %}
+                                <option value="{{ s.id }}">{{ s.city }} {% if s.station_name %}({{ s.station_name }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Місце висадки</label>
+                        <select name="alighting_stop" class="form-select" required>
+                            <option value="">— Оберіть —</option>
+                            {% for s in alighting_options %}
+                                <option value="{{ s.id }}">{{ s.city }} {% if s.station_name %}({{ s.station_name }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-person-circle text-primary"></i> Контактні дані замовника</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Прізвище</label>
+                        {{ contact_form.last_name }}
+                        {% if contact_form.last_name.errors %}<div class="text-danger small mt-1">{{ contact_form.last_name.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Ім'я</label>
+                        {{ contact_form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Телефон</label>
+                        {{ contact_form.phone }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Email (для квитка)</label>
+                        {{ contact_form.email }}
+                    </div>
+                </div>
+            </div>
+
+            {% for pf in passenger_forms %}
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3">
+                    <i class="bi bi-person text-primary"></i>
+                    Пасажир №{{ forloop.counter }}
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Прізвище</label>
+                        {{ pf.last_name }}
+                        {% if pf.last_name.errors %}<div class="text-danger small mt-1">{{ pf.last_name.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Ім'я</label>
+                        {{ pf.first_name }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Документ</label>
+                        {{ pf.document_type }}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small text-muted">Номер документа</label>
+                        {{ pf.document_number }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Тип квитка</label>
+                        {{ pf.price_type }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
+                <h5 class="mb-3">До сплати</h5>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Рейс</span>
+                    <span>{{ trip.route.code }}</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Дата</span>
+                    <span>{{ trip.departure_at|date:"d.m.Y H:i" }}</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Ціна за квиток</span>
+                    <span>{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Кількість</span>
+                    <span id="summary-count">{{ count }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-baseline mb-3">
+                    <span>Разом</span>
+                    <div>
+                        <span style="font-size:28px; font-weight:800; color: var(--primary);" id="summary-total">{{ total_price|floatformat:0 }}</span>
+                        <span> {{ trip.currency }}</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    <i class="bi bi-check-circle"></i> Оформити замовлення
+                </button>
+                <div class="small text-muted text-center mt-3">
+                    Натискаючи кнопку, ви погоджуєтесь з умовами перевезення.
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function changeCount(n) {
+        // Перезавантаження сторінки з новою кількістю пасажирів,
+        // щоб згенерувати потрібну кількість форм
+        const url = new URL(window.location.href);
+        url.searchParams.set('count', n);
+        window.location.href = url.toString();
+    }
+</script>
+{% endblock %}

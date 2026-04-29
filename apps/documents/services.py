@@ -180,24 +180,52 @@ def generate_passenger_list_pdf(trip):
         'passenger_last_name', 'passenger_first_name'
     )
 
-    headers = ['№', 'Прізвище та ім\'я', 'Документ', 'Посадка', 'Висадка', 'Місце', 'Підпис']
+    cell_style = ParagraphStyle('Cell', fontName='DejaVu', fontSize=9, leading=11)
+    cell_bold = ParagraphStyle('CellBold', fontName='DejaVu-Bold', fontSize=9, leading=11)
+
+    DOC_SHORT = {
+        'passport': 'Паспорт',
+        'id_card': 'ID-картка',
+        'driving': 'Посв. водія',
+        'birth': 'Свідоцтво',
+    }
+
+    headers = [
+        Paragraph('№', cell_bold),
+        Paragraph('Прізвище та ім\'я', cell_bold),
+        Paragraph('Документ', cell_bold),
+        Paragraph('Посадка', cell_bold),
+        Paragraph('Висадка', cell_bold),
+        Paragraph('Місце', cell_bold),
+        Paragraph('Підпис', cell_bold),
+    ]
     data = [headers]
 
     for i, t in enumerate(tickets, 1):
+        doc_short = DOC_SHORT.get(t.document_type, t.get_document_type_display())
         data.append([
-            str(i),
-            t.passenger_full_name,
-            f'{t.get_document_type_display()}: {t.document_number}',
-            t.boarding_stop.city,
-            t.alighting_stop.city,
-            t.seat_number or '-',
-            '',
+            Paragraph(str(i), cell_style),
+            Paragraph(t.passenger_full_name, cell_style),
+            Paragraph(f'{doc_short}: {t.document_number}', cell_style),
+            Paragraph(t.boarding_stop.city, cell_style),
+            Paragraph(t.alighting_stop.city, cell_style),
+            Paragraph(t.seat_number or '-', cell_style),
+            Paragraph('', cell_style),
         ])
 
     if len(data) == 1:
-        data.append(['', 'На цей рейс ще немає квитків', '', '', '', '', ''])
+        data.append([
+            Paragraph('', cell_style),
+            Paragraph('На цей рейс ще немає квитків', cell_style),
+            Paragraph('', cell_style),
+            Paragraph('', cell_style),
+            Paragraph('', cell_style),
+            Paragraph('', cell_style),
+            Paragraph('', cell_style),
+        ])
 
-    table = Table(data, colWidths=[1 * cm, 4.5 * cm, 4 * cm, 2.5 * cm, 2.5 * cm, 1.5 * cm, 3 * cm])
+    # Ширини колонок (сума ~18 см, що поміщається у A4 з полями)
+    table = Table(data, colWidths=[0.8 * cm, 4.2 * cm, 4.5 * cm, 2.3 * cm, 2.3 * cm, 1.4 * cm, 3 * cm])
     table.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, -1), 'DejaVu', 9),
         ('FONT', (0, 0), (-1, 0), 'DejaVu-Bold', 9),

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Замовлення {{ order.order_number }}{% endblock %}
+{% block page_title %}Замовлення {{ order.order_number }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="{% url 'core:orders_list' %}" class="text-decoration-none text-muted-2">
+            <i class="bi bi-arrow-left"></i> Назад до замовлень
+        </a>
+        <h2 class="mt-2 mb-1">{{ order.order_number }}</h2>
+        <div class="text-muted-2">
+            Створено {{ order.created_at|date:"d.m.Y о H:i" }}
+            &nbsp;·&nbsp;
+            <span class="badge-status status-{{ order.status }}">{{ order.get_status_display }}</span>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/orders/order/{{ order.id }}/change/" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil"></i> Редагувати
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person"></i> Замовник</div>
+            <div class="card-body">
+                <h6 class="mb-1">{{ order.contact_last_name }} {{ order.contact_first_name }}</h6>
+                <div class="small">
+                    <div><i class="bi bi-telephone text-muted-2"></i> {{ order.contact_phone }}</div>
+                    {% if order.contact_email %}
+                        <div><i class="bi bi-envelope text-muted-2"></i> {{ order.contact_email }}</div>
+                    {% endif %}
+                </div>
+                {% if order.customer %}
+                    <hr>
+                    <div class="text-muted-2 small">Корпоративний клієнт</div>
+                    <div><b>{{ order.customer.name }}</b></div>
+                    {% if order.customer.tax_number %}
+                        <div class="small text-muted-2">ЄДРПОУ: {{ order.customer.tax_number }}</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bus-front"></i> Рейс</div>
+            <div class="card-body">
+                <a href="{% url 'core:trip_detail' order.trip.id %}" class="text-decoration-none">
+                    <h6 class="mb-1">{{ order.trip.route.name }}</h6>
+                </a>
+                <div class="small text-muted-2 mb-2">
+                    <b>{{ order.trip.route.code }}</b> · {{ order.trip.departure_at|date:"d.m.Y" }} о {{ order.trip.departure_at|date:"H:i" }}
+                </div>
+                <div class="small">
+                    <i class="bi bi-bus-front text-muted-2"></i>
+                    {{ order.trip.vehicle.brand }} {{ order.trip.vehicle.model }}
+                    ({{ order.trip.vehicle.registration_number }})
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-cash-coin"></i> Оплата</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted-2">Загальна сума</span>
+                    <h5 class="mb-0">{{ order.total_price|floatformat:2 }} {{ order.currency }}</h5>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted-2">Спосіб</span>
+                    <span>{{ order.get_payment_method_display|default:"—" }}</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted-2">Оплачено</span>
+                    <span>{{ order.paid_at|date:"d.m.Y H:i"|default:"—" }}</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted-2">Створив</span>
+                    <span>{{ order.created_by|default:"—" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card table-card">
+    <div class="card-header"><i class="bi bi-ticket"></i> Квитки ({{ tickets|length }})</div>
+    {% if tickets %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>№ квитка</th>
+                    <th>Пасажир</th>
+                    <th>Документ</th>
+                    <th>Посадка</th>
+                    <th>Висадка</th>
+                    <th>Місце</th>
+                    <th>Тип</th>
+                    <th class="text-end">Ціна</th>
+                    <th>Статус</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tickets %}
+                <tr>
+                    <td><b>{{ t.ticket_number }}</b></td>
+                    <td>{{ t.passenger_last_name }} {{ t.passenger_first_name }}</td>
+                    <td class="small">{{ t.document_number }}</td>
+                    <td>{{ t.boarding_stop.city }}</td>
+                    <td>{{ t.alighting_stop.city }}</td>
+                    <td>{{ t.seat_number|default:"—" }}</td>
+                    <td><span class="badge bg-light text-dark">{{ t.get_price_type_display }}</span></td>
+                    <td class="text-end">{{ t.price|floatformat:0 }}</td>
+                    <td><span class="badge-status status-{{ t.status }}">{{ t.get_status_display }}</span></td>
+                    <td>
+                        <a href="{% url 'documents:ticket_pdf' t.id %}" target="_blank" class="btn btn-sm btn-soft-primary">
+                            <i class="bi bi-file-pdf"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-ticket"></i>
+        <div>У замовленні немає квитків</div>
+    </div>
+    {% endif %}
+</div>
+
+{% if order.notes %}
+<div class="card mt-3">
+    <div class="card-header"><i class="bi bi-chat-text"></i> Примітки</div>
+    <div class="card-body">{{ order.notes|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+{% endblock %}

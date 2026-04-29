@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Маршрути | TransAuto Travel{% endblock %}
+{% block page_title %}Маршрути{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:320px;"
+           placeholder="Пошук за кодом, назвою, містом...">
+    <select name="active" class="form-select" style="max-width:200px;">
+        <option value="">Усі</option>
+        <option value="1" {% if filters.active == '1' %}selected{% endif %}>Активні</option>
+        <option value="0" {% if filters.active == '0' %}selected{% endif %}>Неактивні</option>
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:routes_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/routes/route/add/" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Новий маршрут
+        </a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if routes %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Код</th>
+                    <th>Назва</th>
+                    <th>Звідки</th>
+                    <th>Куди</th>
+                    <th class="text-end">Відстань</th>
+                    <th class="text-end">Час</th>
+                    <th class="text-end">Зупинок</th>
+                    <th class="text-end">Рейсів</th>
+                    <th>Статус</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in routes %}
+                <tr>
+                    <td><b>{{ r.code }}</b></td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.origin_city }} <span class="text-muted-2 small">({{ r.origin_country }})</span></td>
+                    <td>{{ r.destination_city }} <span class="text-muted-2 small">({{ r.destination_country }})</span></td>
+                    <td class="text-end">{{ r.distance_km }} км</td>
+                    <td class="text-end">{{ r.duration_hours }} год</td>
+                    <td class="text-end">{{ r.stops_count }}</td>
+                    <td class="text-end">{{ r.trips_count }}</td>
+                    <td>
+                        {% if r.is_active %}
+                            <span class="badge-status status-paid">Активний</span>
+                        {% else %}
+                            <span class="badge-status status-cancelled">Неактивний</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'core:route_map' r.id %}" class="btn btn-sm btn-soft-primary" title="Карта">
+                            <i class="bi bi-geo-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-signpost-split"></i>
+        <div>Маршрутів не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}{{ trip.route.name }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        #map { height: 360px; border-radius: 12px; }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+<section class="section-sm">
+    <div class="container">
+        <a href="{% url 'portal:search' %}" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left"></i> До списку рейсів
+        </a>
+
+        <div class="row g-4 mt-2">
+            <div class="col-lg-8">
+                <div class="card p-4 border-0 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="mb-1">{{ trip.route.name }}</h2>
+                            <div class="text-muted">
+                                <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d F Y" }}
+                                &nbsp; · &nbsp;
+                                <i class="bi bi-clock"></i> Відправлення о {{ trip.departure_at|date:"H:i" }}
+                            </div>
+                        </div>
+                        <span class="pill"><i class="bi bi-people"></i> {{ free }} вільних</span>
+                    </div>
+
+                    <div class="row g-3 my-2">
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted small">Час у дорозі</div>
+                            <div class="fw-semibold">{{ trip.route.duration_hours }} год</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted small">Відстань</div>
+                            <div class="fw-semibold">{{ trip.route.distance_km }} км</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted small">Зупинок у дорозі</div>
+                            <div class="fw-semibold">{{ stops|length }}</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted small">Транспорт</div>
+                            <div class="fw-semibold">{{ trip.vehicle.brand }}</div>
+                        </div>
+                    </div>
+
+                    {% if stops_with_coords %}
+                    <div id="map" class="mt-3"></div>
+                    {% endif %}
+                </div>
+
+                <div class="card p-4 border-0 shadow-sm mt-3">
+                    <h5 class="mb-3"><i class="bi bi-signpost-split text-primary"></i> Зупинки на маршруті</h5>
+                    <ol class="list-unstyled mb-0">
+                        {% for s in stops %}
+                        <li class="d-flex align-items-start gap-3 py-2 border-bottom">
+                            <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width:32px; height:32px; flex:none; font-size:14px;">{{ s.order }}</div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">{{ s.city }} <span class="text-muted small">({{ s.country }})</span></div>
+                                {% if s.station_name %}<div class="small text-muted">{{ s.station_name }}</div>{% endif %}
+                            </div>
+                            <div class="text-end small text-muted">
+                                +{{ s.departure_offset_minutes }} хв
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <div class="card p-4 border-0 shadow-sm mt-3">
+                    <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> Транспорт та зручності</h5>
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <div class="text-muted small">Модель</div>
+                            <div class="fw-semibold">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</div>
+                            <div class="text-muted small mt-2">Рік випуску</div>
+                            <div class="fw-semibold">{{ trip.vehicle.year }}</div>
+                            <div class="text-muted small mt-2">Місць</div>
+                            <div class="fw-semibold">{{ trip.vehicle.seats_total|default:"—" }}</div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="text-muted small mb-2">Зручності у автобусі</div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% if trip.vehicle.has_wifi %}<span class="pill"><i class="bi bi-wifi"></i> Wi-Fi</span>{% endif %}
+                                {% if trip.vehicle.has_climate %}<span class="pill"><i class="bi bi-thermometer-half"></i> Клімат</span>{% endif %}
+                                {% if trip.vehicle.has_wc %}<span class="pill"><i class="bi bi-water"></i> Туалет</span>{% endif %}
+                                {% if trip.vehicle.has_tv %}<span class="pill"><i class="bi bi-tv"></i> Мультимедіа</span>{% endif %}
+                                {% if trip.vehicle.has_usb %}<span class="pill"><i class="bi bi-usb-symbol"></i> USB</span>{% endif %}
+                                {% if trip.vehicle.comfort_class %}<span class="pill">{{ trip.vehicle.get_comfort_class_display }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
+                    <div class="text-muted small">Ціна за один квиток</div>
+                    <div style="font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1;">
+                        {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Відправлення</span>
+                        <b>{{ trip.departure_at|date:"d.m.Y H:i" }}</b>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Тривалість</span>
+                        <b>{{ trip.route.duration_hours }} год</b>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Вільних місць</span>
+                        <b>{{ free }}</b>
+                    </div>
+                    {% if free > 0 %}
+                        <a href="{% url 'portal:booking_form' trip.id %}" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-cart-check"></i> Купити квиток
+                        </a>
+                    {% else %}
+                        <button class="btn btn-secondary btn-lg w-100" disabled>Місць немає</button>
+                    {% endif %}
+                    <div class="text-center small text-muted mt-3">
+                        <i class="bi bi-shield-check"></i> Безпечне оплачення
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if stops_with_coords %}
+{{ stops_with_coords|json_script:"stops-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const stopsJson = JSON.parse(document.getElementById('stops-data').textContent);
+    const map = L.map('map').setView([49, 18], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19, subdomains: 'abcd',
+        attribution: '© OpenStreetMap, © CARTO'
+    }).addTo(map);
+
+    if (stopsJson.length > 0) {
+        const latlngs = [];
+        stopsJson.forEach((s, i) => {
+            const isFirst = i === 0;
+            const isLast = i === stopsJson.length - 1;
+            const color = isFirst ? '#16a34a' : (isLast ? '#dc2626' : '#4f46e5');
+            const icon = L.divIcon({
+                html: `<div style="background:${color}; color:#fff; border-radius:50%;
+                       width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+                       font-weight:700; font-size:13px; border:2px solid #fff;
+                       box-shadow:0 2px 4px rgba(0,0,0,0.3);">${s.order}</div>`,
+                iconSize: [28, 28], iconAnchor: [14, 14]
+            });
+            const marker = L.marker([s.lat, s.lng], {icon}).addTo(map);
+            marker.bindPopup(`<b>${s.city}</b> (${s.country})`);
+            latlngs.push([s.lat, s.lng]);
+        });
+        const line = L.polyline(latlngs, {color: '#4f46e5', weight: 4, opacity: 0.7, dashArray: '8,6'}).addTo(map);
+        map.fitBounds(line.getBounds(), {padding: [40, 40]});
+    }
+</script>
+{% endif %}
+{% endblock %}

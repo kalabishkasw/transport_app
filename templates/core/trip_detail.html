@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Рейс {{ trip.route.code }} | {{ trip.departure_at|date:"d.m.Y" }}{% endblock %}
+{% block page_title %}Рейс {{ trip.route.code }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="{% url 'core:trips_list' %}" class="text-decoration-none text-muted-2">
+            <i class="bi bi-arrow-left"></i> Назад до рейсів
+        </a>
+        <h2 class="mt-2 mb-1">{{ trip.route.name }}</h2>
+        <div class="text-muted-2">
+            {{ trip.departure_at|date:"l, d F Y" }} о {{ trip.departure_at|date:"H:i" }}
+            &nbsp;·&nbsp;
+            <span class="badge-status status-{{ trip.status }}">{{ trip.get_status_display }}</span>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'core:route_map' trip.route.id %}" class="btn btn-soft-primary">
+            <i class="bi bi-geo-alt"></i> Карта
+        </a>
+        <a href="{% url 'documents:passenger_list_pdf' trip.id %}" target="_blank" class="btn btn-primary">
+            <i class="bi bi-file-pdf"></i> Посадковий лист
+        </a>
+        <a href="/admin/routes/trip/{{ trip.id }}/change/" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil"></i>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-primary-soft"><i class="bi bi-people"></i></div>
+            <div>
+                <p class="metric-label">Продано</p>
+                <p class="metric-value">{{ sold }}</p>
+                <div class="metric-sub">з {{ trip.vehicle.seats_total|default:"—" }} місць</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-success-soft"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <p class="metric-label">Вільно</p>
+                <p class="metric-value">{{ free_seats }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-warning-soft"><i class="bi bi-cash-coin"></i></div>
+            <div>
+                <p class="metric-label">Виручка</p>
+                <p class="metric-value">{{ revenue|floatformat:0 }} {{ trip.currency }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-info-soft"><i class="bi bi-tag"></i></div>
+            <div>
+                <p class="metric-label">Базова ціна</p>
+                <p class="metric-value">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bus-front"></i> Транспорт</div>
+            <div class="card-body">
+                <h6 class="mb-1">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</h6>
+                <div class="text-muted-2 mb-2">{{ trip.vehicle.registration_number }} · {{ trip.vehicle.year }} р.</div>
+                <ul class="list-unstyled small mb-0">
+                    <li><i class="bi bi-people text-muted-2"></i> {{ trip.vehicle.seats_total|default:"—" }} місць
+                        {% if trip.vehicle.comfort_class %} · {{ trip.vehicle.get_comfort_class_display }}{% endif %}</li>
+                    {% if trip.vehicle.has_wifi %}<li><i class="bi bi-wifi text-success"></i> Wi-Fi</li>{% endif %}
+                    {% if trip.vehicle.has_climate %}<li><i class="bi bi-thermometer-half text-success"></i> Клімат</li>{% endif %}
+                    {% if trip.vehicle.has_wc %}<li><i class="bi bi-water text-success"></i> Туалет</li>{% endif %}
+                    {% if trip.vehicle.has_tv %}<li><i class="bi bi-tv text-success"></i> ТВ</li>{% endif %}
+                    {% if trip.vehicle.has_usb %}<li><i class="bi bi-usb-symbol text-success"></i> USB</li>{% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person-badge"></i> Екіпаж</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="text-muted-2 small">Основний водій</div>
+                    <h6 class="mb-0">{{ trip.main_driver.user.last_name }} {{ trip.main_driver.user.first_name }}</h6>
+                    <div class="small">
+                        Категорії: <b>{{ trip.main_driver.license_categories }}</b><br>
+                        Тел.: {{ trip.main_driver.user.phone|default:"—" }}
+                    </div>
+                </div>
+                {% if trip.co_driver %}
+                <div>
+                    <div class="text-muted-2 small">Змінний водій</div>
+                    <h6 class="mb-0">{{ trip.co_driver.user.last_name }} {{ trip.co_driver.user.first_name }}</h6>
+                </div>
+                {% else %}
+                <div class="text-muted-2 small">Без змінного водія</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-signpost-split"></i> Маршрут</div>
+            <div class="card-body">
+                <div class="mb-2"><b>{{ trip.route.code }}</b> &nbsp; {{ trip.route.name }}</div>
+                <div class="small text-muted-2 mb-2">
+                    {{ trip.route.distance_km }} км · {{ trip.route.duration_hours }} год · {{ stops|length }} зупинок
+                </div>
+                <ol class="list-unstyled mb-0 small">
+                    {% for s in stops %}
+                        <li class="mb-1">
+                            <span class="badge bg-light text-dark">{{ s.order }}</span>
+                            <b>{{ s.city }}</b>
+                            <span class="text-muted-2">+{{ s.departure_offset_minutes }} хв</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card table-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-ticket"></i> Пасажири на рейсі ({{ tickets|length }})</span>
+    </div>
+    {% if tickets %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Пасажир</th>
+                    <th>Документ</th>
+                    <th>Посадка</th>
+                    <th>Висадка</th>
+                    <th>Місце</th>
+                    <th>Тип</th>
+                    <th class="text-end">Ціна</th>
+                    <th>Статус</th>
+                    <th>Замовлення</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tickets %}
+                <tr>
+                    <td><b>{{ t.ticket_number }}</b></td>
+                    <td>{{ t.passenger_last_name }} {{ t.passenger_first_name }}</td>
+                    <td class="small">{{ t.get_document_type_display }}: {{ t.document_number }}</td>
+                    <td>{{ t.boarding_stop.city }}</td>
+                    <td>{{ t.alighting_stop.city }}</td>
+                    <td>{{ t.seat_number|default:"—" }}</td>
+                    <td><span class="badge bg-light text-dark">{{ t.get_price_type_display }}</span></td>
+                    <td class="text-end">{{ t.price|floatformat:0 }} {{ trip.currency }}</td>
+                    <td><span class="badge-status status-{{ t.status }}">{{ t.get_status_display }}</span></td>
+                    <td>
+                        <a href="{% url 'core:order_detail' t.order.id %}" class="text-decoration-none">{{ t.order.order_number }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-people"></i>
+        <div>На цей рейс ще немає квитків</div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

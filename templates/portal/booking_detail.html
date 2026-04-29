@@ -1,0 +1,115 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Бронювання {{ order.order_number }} | TransAuto Travel{% endblock %}
+
+{% block content %}
+
+<section class="section-sm">
+<div class="container">
+
+    <a href="{% url 'portal:account' %}" class="text-muted text-decoration-none small">
+        <i class="bi bi-arrow-left"></i> Назад до кабінету
+    </a>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-8">
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small">Замовлення</div>
+                        <h2 class="mb-1">{{ order.order_number }}</h2>
+                        <div class="text-muted small">Створено {{ order.created_at|date:"d.m.Y о H:i" }}</div>
+                    </div>
+                    <span class="pill">{{ order.get_status_display }}</span>
+                </div>
+            </div>
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> Рейс</h5>
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <div class="trip-route">
+                            <div>
+                                <div class="trip-time">{{ order.trip.departure_at|date:"H:i" }}</div>
+                                <div class="trip-time-label">{{ order.trip.route.origin_city }}</div>
+                            </div>
+                            <div class="trip-arrow"></div>
+                            <div class="text-end">
+                                <div class="trip-time text-muted">{{ order.trip.route.duration_hours }} год</div>
+                                <div class="trip-time-label">{{ order.trip.route.destination_city }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="text-muted small">Дата відправлення</div>
+                        <div class="fw-semibold">{{ order.trip.departure_at|date:"d.m.Y" }}</div>
+                        <div class="text-muted small mt-2">Транспорт</div>
+                        <div class="fw-semibold">{{ order.trip.vehicle.brand }} {{ order.trip.vehicle.model }}</div>
+                        <div class="small text-muted">{{ order.trip.vehicle.registration_number }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-ticket-perforated text-primary"></i> Квитки ({{ tickets|length }})</h5>
+                {% for t in tickets %}
+                <div class="d-flex justify-content-between align-items-center py-3 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div>
+                        <div class="fw-semibold">{{ t.passenger_last_name }} {{ t.passenger_first_name }}</div>
+                        <div class="small text-muted">
+                            № {{ t.ticket_number }} · {{ t.boarding_stop.city }} → {{ t.alighting_stop.city }}
+                            {% if t.seat_number %} · місце {{ t.seat_number }}{% endif %}
+                        </div>
+                        <div class="small text-muted">
+                            {{ t.get_document_type_display }}: {{ t.document_number }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-semibold mb-1">{{ t.price|floatformat:0 }} {{ order.currency }}</div>
+                        <span class="pill">{{ t.get_status_display }}</span>
+                        <div class="mt-1">
+                            <a href="{% url 'documents:ticket_pdf' t.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> PDF квиток
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-4 border-0 shadow-sm">
+                <h5 class="mb-3">Підсумок</h5>
+                <div class="d-flex justify-content-between mb-2 small">
+                    <span class="text-muted">Квитків</span>
+                    <span>{{ tickets|length }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 small">
+                    <span class="text-muted">Спосіб оплати</span>
+                    <span>{{ order.get_payment_method_display|default:"Не вказано" }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-baseline">
+                    <span>До сплати</span>
+                    <div>
+                        <span style="font-size:24px; font-weight:800; color:var(--primary);">
+                            {{ order.total_price|floatformat:0 }}
+                        </span>
+                        <span> {{ order.currency }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info border-0 mt-3 small">
+                <i class="bi bi-info-circle"></i>
+                Збережіть PDF-квитки у телефоні. На посадці пред'явіть водію разом з документом, що посвідчує особу.
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+
+{% endblock %}

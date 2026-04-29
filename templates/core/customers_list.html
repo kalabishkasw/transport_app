@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Клієнти | TransAuto Travel{% endblock %}
+{% block page_title %}Клієнти{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:320px;"
+           placeholder="Пошук за назвою, ЄДРПОУ, контактною особою...">
+    <select name="country" class="form-select" style="max-width:200px;">
+        <option value="">Усі країни</option>
+        {% for code, label in countries %}
+            <option value="{{ code }}" {% if filters.country == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:customers_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/customers/customer/add/" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Новий клієнт
+        </a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if customers %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Юридична назва</th>
+                    <th>Країна</th>
+                    <th>Контактна особа</th>
+                    <th>Телефон</th>
+                    <th>Email</th>
+                    <th class="text-end">Замовлень</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customers %}
+                <tr>
+                    <td>
+                        <b>{{ c.name }}</b>
+                        {% if c.tax_number %}
+                            <div class="text-muted-2 small">ЄДРПОУ: {{ c.tax_number }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ c.legal_name|default:"—" }}</td>
+                    <td>{{ c.get_country_display }}</td>
+                    <td>{{ c.contact_person|default:"—" }}</td>
+                    <td class="small">{{ c.contact_phone|default:"—" }}</td>
+                    <td class="small">{{ c.contact_email|default:"—" }}</td>
+                    <td class="text-end"><b>{{ c.orders_count }}</b></td>
+                    <td>
+                        {% if c.is_active %}
+                            <span class="badge-status status-paid">Активний</span>
+                        {% else %}
+                            <span class="badge-status status-cancelled">Неактивний</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-building"></i>
+        <div>Клієнтів не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}

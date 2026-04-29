@@ -1,0 +1,128 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}TransAuto Travel — міжнародні автобусні рейси з України до Європи{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="container hero-content text-center">
+        <h1>Подорожуй Європою <br>зручно та надійно</h1>
+        <p>Регулярні автобусні рейси з України до Польщі, Чехії, Словаччини та інших країн ЄС.
+            Купуй квиток онлайн за хвилину.</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="search-card">
+        <form method="get" action="{% url 'portal:search' %}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label>Звідки</label>
+                    {{ form.origin }}
+                </div>
+                <div class="col-md-4">
+                    <label>Куди</label>
+                    {{ form.destination }}
+                </div>
+                <div class="col-md-2">
+                    <label>Дата</label>
+                    {{ form.date }}
+                </div>
+                <div class="col-md-2 d-grid">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary btn-lg" type="submit">
+                        <i class="bi bi-search"></i> Знайти
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container">
+        <h2 class="section-title text-center">Найближчі рейси</h2>
+        <p class="section-subtitle text-center">Рейси, що відправляються найближчим часом</p>
+
+        {% if popular %}
+            <div class="row g-3">
+                {% for trip in popular %}
+                <div class="col-lg-6">
+                    <a href="{% url 'portal:trip_detail' trip.id %}" class="text-decoration-none text-dark">
+                        <div class="trip-card">
+                            <div>
+                                <div class="trip-route">
+                                    <div>
+                                        <div class="trip-time">{{ trip.departure_at|date:"H:i" }}</div>
+                                        <div class="trip-time-label">{{ trip.route.origin_city }}</div>
+                                    </div>
+                                    <div class="trip-arrow"></div>
+                                    <div class="text-end">
+                                        <div class="trip-time text-muted">{{ trip.route.duration_hours }} год</div>
+                                        <div class="trip-time-label">{{ trip.route.destination_city }}</div>
+                                    </div>
+                                </div>
+                                <div class="trip-meta">
+                                    <span><i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y" }}</span>
+                                    <span><i class="bi bi-bus-front"></i> {{ trip.vehicle.brand }} {{ trip.vehicle.model }}</span>
+                                    <span><i class="bi bi-signpost"></i> {{ trip.route.distance_km }} км</span>
+                                </div>
+                            </div>
+                            <div class="trip-action">
+                                <div class="trip-price-label">від</div>
+                                <div class="trip-price">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</div>
+                                <button class="btn btn-primary btn-sm mt-2">Купити квиток</button>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-x" style="font-size:48px; opacity:0.3;"></i>
+                <p class="mt-3">Найближчих рейсів зараз немає.</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="section bg-light">
+    <div class="container">
+        <h2 class="section-title text-center">Чому ми</h2>
+        <p class="section-subtitle text-center">Кілька причин подорожувати з нами</p>
+
+        <div class="row g-4 mt-2">
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
+                    <h5>Надійно</h5>
+                    <p>Сучасний автопарк, технічний контроль, регулярні рейси за розкладом.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="bi bi-stars"></i></div>
+                    <h5>Комфортно</h5>
+                    <p>Wi-Fi, USB-розетки, кондиціонер, м'які крісла з відкидною спинкою.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="bi bi-cash-coin"></i></div>
+                    <h5>Доступно</h5>
+                    <p>Прозорі ціни, без прихованих платежів, знижки для дітей та студентів.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="bi bi-laptop"></i></div>
+                    <h5>Онлайн</h5>
+                    <p>Купівля квитка за хвилину, миттєве підтвердження, електронний квиток.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

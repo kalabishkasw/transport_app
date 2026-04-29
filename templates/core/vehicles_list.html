@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Автопарк | TransAuto Travel{% endblock %}
+{% block page_title %}Автопарк{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-bar">
+    <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:280px;"
+           placeholder="Пошук за номером, маркою, моделлю...">
+    <select name="type" class="form-select" style="max-width:200px;">
+        <option value="">Усі типи</option>
+        {% for code, label in types %}
+            <option value="{{ code }}" {% if filters.type == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="active" class="form-select" style="max-width:200px;">
+        <option value="">Усі</option>
+        <option value="1" {% if filters.active == '1' %}selected{% endif %}>В експлуатації</option>
+        <option value="0" {% if filters.active == '0' %}selected{% endif %}>Не в експлуатації</option>
+    </select>
+    <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
+    <a href="{% url 'core:vehicles_list' %}" class="btn btn-outline-secondary">Скинути</a>
+    <span class="ms-auto">
+        <a href="/admin/fleet/vehicle/add/" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Додати ТЗ
+        </a>
+    </span>
+</form>
+
+<div class="card table-card">
+    {% if vehicles %}
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Номер</th>
+                    <th>Тип</th>
+                    <th>Марка / модель</th>
+                    <th>Рік</th>
+                    <th class="text-end">Місць</th>
+                    <th>Клас</th>
+                    <th>Опції</th>
+                    <th>Пробіг</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles %}
+                <tr>
+                    <td><b>{{ v.registration_number }}</b></td>
+                    <td><span class="badge bg-light text-dark">{{ v.get_vehicle_type_display }}</span></td>
+                    <td>
+                        <div>{{ v.brand }} {{ v.model }}</div>
+                        <div class="text-muted-2 small">{{ v.get_fuel_type_display }}</div>
+                    </td>
+                    <td>{{ v.year }}</td>
+                    <td class="text-end">{{ v.seats_total|default:"—" }}</td>
+                    <td>{{ v.get_comfort_class_display|default:"—" }}</td>
+                    <td>
+                        {% if v.has_wifi %}<i class="bi bi-wifi text-success" title="Wi-Fi"></i>{% endif %}
+                        {% if v.has_climate %}<i class="bi bi-thermometer-half text-success" title="Клімат"></i>{% endif %}
+                        {% if v.has_wc %}<i class="bi bi-water text-success" title="Туалет"></i>{% endif %}
+                        {% if v.has_tv %}<i class="bi bi-tv text-success" title="ТВ"></i>{% endif %}
+                        {% if v.has_usb %}<i class="bi bi-usb-symbol text-success" title="USB"></i>{% endif %}
+                    </td>
+                    <td class="small">{{ v.mileage_km|floatformat:0 }} км</td>
+                    <td>
+                        {% if v.is_active %}
+                            <span class="badge-status status-paid">В роботі</span>
+                        {% else %}
+                            <span class="badge-status status-cancelled">Не активний</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-bus-front"></i>
+        <div>Транспорту не знайдено</div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/_pagination.html' %}
+
+{% endblock %}
