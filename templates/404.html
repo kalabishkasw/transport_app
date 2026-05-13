@@ -1,0 +1,29 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Сторінку не знайдено · 404{% endblock %}
+
+{% block content %}
+<section class="section text-center" style="padding: 80px 0;">
+    <div class="container">
+        <div style="font-size: 120px; font-weight: 800; line-height: 1;
+                    background: linear-gradient(135deg, #0369a1 0%, #06b6d4 100%);
+                    -webkit-background-clip: text; background-clip: text;
+                    color: transparent; margin-bottom: 16px;">
+            404
+        </div>
+        <h2 class="mb-2">Сторінку не знайдено</h2>
+        <p class="text-muted mb-4" style="max-width:520px; margin:0 auto;">
+            Здається, ця сторінка вирушила у подорож і ще не повернулась.
+            Перевірте адресу або поверніться на головну, щоб знайти потрібний рейс.
+        </p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{% url 'portal:home' %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-house"></i> На головну
+            </a>
+            <a href="{% url 'portal:search' %}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-search"></i> Знайти рейс
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

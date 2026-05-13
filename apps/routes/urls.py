@@ -1,3 +1,4 @@
+"""url-маршрути модуля routes: тільки сторінка карти конкретного маршруту"""
 from django.urls import path
 
 from . import views

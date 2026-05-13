@@ -1,3 +1,4 @@
+"""appconfig модуля routes (Route, Stop, Trip)"""
 from django.apps import AppConfig
 
 

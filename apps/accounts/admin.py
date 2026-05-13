@@ -1,3 +1,9 @@
+"""
+адмінка користувачів: розширена UserAdmin з полем ролі.
+
+додає окремі fieldsets для додаткових полів (роль, телефон, по батькові)
+на сторінці редагуваня і у формі створення користувача.
+"""
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 

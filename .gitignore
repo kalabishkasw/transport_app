@@ -29,3 +29,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Тимчасові файли при деплої
+*.bak
+*.tmp
+requirements.actual.txt
+
+# Render
+.render/

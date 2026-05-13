@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Підтвердження замовлення {{ order.order_number }}</title>
+</head>
+<body style="margin:0; padding:0; background:#f1f5f9; font-family: 'Inter', Arial, sans-serif; color:#0f172a;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+    <tr>
+        <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0"
+                   style="background:#ffffff; border-radius:16px; overflow:hidden; max-width:600px;">
+
+                <tr>
+                    <td style="background:linear-gradient(135deg,#0c4a6e 0%,#075985 50%,#0891b2 100%);
+                               padding:32px; color:#ffffff; text-align:center;">
+                        <div style="font-size:14px; opacity:0.9; letter-spacing:1px;">TRANSAUTO TRAVEL</div>
+                        <h1 style="margin:8px 0 0; font-size:24px;">Дякуємо за замовлення!</h1>
+                        <p style="margin:8px 0 0; opacity:0.9;">Ваш квиток вже у кабінеті</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:32px;">
+                        <p>Шановний {{ order.contact_first_name }},</p>
+                        <p>Ваше замовлення <b>{{ order.order_number }}</b> було успішно створено.
+                           Нижче ви знайдете деталі вашої поїздки.</p>
+
+                        <table width="100%" cellpadding="16" cellspacing="0"
+                               style="background:#f8fafc; border-radius:12px; margin-top:16px;">
+                            <tr>
+                                <td>
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td>
+                                                <div style="color:#64748b; font-size:12px;">Маршрут</div>
+                                                <div style="font-size:18px; font-weight:600;">
+                                                    {{ order.trip.route.origin_city }} → {{ order.trip.route.destination_city }}
+                                                </div>
+                                            </td>
+                                            <td align="right">
+                                                <div style="color:#64748b; font-size:12px;">Відправлення</div>
+                                                <div style="font-size:18px; font-weight:600;">
+                                                    {{ order.trip.departure_at|date:"d.m.Y H:i" }}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr><td><hr style="border:none; border-top:1px solid #e2e8f0;"></td></tr>
+                            <tr>
+                                <td style="font-size:14px; color:#64748b;">
+                                    Транспорт: <b style="color:#0f172a;">{{ order.trip.vehicle.brand }} {{ order.trip.vehicle.model }}</b><br>
+                                    Кількість квитків: <b style="color:#0f172a;">{{ order.tickets.count }}</b><br>
+                                    Сума до сплати:
+                                    <b style="color:#4f46e5; font-size:18px;">{{ order.total_price|floatformat:0 }} {{ order.currency }}</b>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                            <tr>
+                                <td align="center">
+                                    <a href="https://transauto.travel/account/booking/{{ order.id }}/"
+                                       style="display:inline-block; background:#4f46e5; color:#ffffff;
+                                              padding:14px 32px; border-radius:8px; text-decoration:none;
+                                              font-weight:600;">
+                                        Переглянути у кабінеті
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin-top:24px; font-size:14px; color:#64748b;">
+                            <b>Важливо:</b> при посадці пред'явіть водію документ, що посвідчує особу,
+                            та електронний або роздрукований квиток.
+                        </p>
+
+                        <p style="margin-top:24px; font-size:14px; color:#64748b;">
+                            Маєте питання? Напишіть нам на
+                            <a href="mailto:{{ support_email|default:'support@transauto.travel' }}"
+                               style="color:#4f46e5;">{{ support_email|default:'support@transauto.travel' }}</a>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="background:#0f172a; padding:24px; text-align:center;
+                               color:#94a3b8; font-size:12px;">
+                        © {% now "Y" %} TransAuto Travel · Міжнародні автобусні перевезення<br>
+                        Цей лист згенеровано автоматично.
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

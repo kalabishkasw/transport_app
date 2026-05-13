@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load transport_extras %}
 
 {% block title %}{{ route.name }} | Карта маршруту{% endblock %}
 
@@ -13,6 +14,12 @@
             width: 26px; height: 26px;
             background: #4f46e5; color: #fff;
             border-radius: 50%; font-weight: 600; font-size: 13px;
+        }
+        /* Прибираємо стандартний білий квадрат навколо custom-маркерів */
+        .leaflet-div-icon, .route-stop-marker {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
         }
     </style>
 {% endblock %}
@@ -31,7 +38,7 @@
         </div>
     </div>
     <div class="col-md-4 text-end">
-        <a href="/admin/routes/route/{{ route.id }}/change/" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'admin:routes_route_change' route.id %}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-pencil"></i> Редагувати
         </a>
     </div>
@@ -48,7 +55,7 @@
 
     <div class="col-lg-3">
         <div class="card">
-            <div class="card-header bg-white">
+            <div class="card-header">
                 <b>Зупинки маршруту</b>
             </div>
             <ul class="list-group list-group-flush">
@@ -61,7 +68,7 @@
                                 {% if s.station %}<div class="small text-muted">{{ s.station }}</div>{% endif %}
                                 <div class="small">
                                     <i class="bi bi-clock"></i>
-                                    +{{ s.arrival }} хв / відпр. +{{ s.departure }} хв
+                                    від старту: <b>{{ s.departure|format_minutes }}</b>
                                 </div>
                                 {% if s.lat is None %}
                                     <div class="small text-warning">
@@ -105,40 +112,56 @@
             const color = isFirst ? '#16a34a' : (isLast ? '#dc2626' : '#4f46e5');
 
             const icon = L.divIcon({
-                className: 'custom-marker',
+                className: 'route-stop-marker',
                 html: `<div style="
                     background:${color}; color:#fff; border-radius:50%;
                     width:30px; height:30px; display:flex;
                     align-items:center; justify-content:center;
                     font-weight:700; font-size:14px;
-                    border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.3);
+                    border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.3);
                 ">${s.order}</div>`,
                 iconSize: [30, 30],
                 iconAnchor: [15, 15]
             });
 
             const marker = L.marker([s.lat, s.lng], {icon}).addTo(map);
+            const fmtMins = (m) => {
+                if (m < 60) return m + ' хв';
+                const h = Math.floor(m / 60);
+                const mm = m % 60;
+                return h + ' год ' + String(mm).padStart(2, '0') + ' хв';
+            };
             marker.bindPopup(`
                 <b>${s.order}. ${s.city}</b> (${s.country})<br>
                 ${s.station ? s.station + '<br>' : ''}
                 ${s.address ? s.address + '<br>' : ''}
-                <small>+${s.arrival} хв / відпр. +${s.departure} хв</small><br>
+                <small>Від старту: <b>${fmtMins(s.departure)}</b></small><br>
                 <small>${s.can_board ? '✅ Посадка' : ''} ${s.can_alight ? '✅ Висадка' : ''}</small>
             `);
 
             latlngs.push([s.lat, s.lng]);
         });
 
-        // Лінія руху по зупинках
-        const polyline = L.polyline(latlngs, {
-            color: '#4f46e5',
-            weight: 4,
-            opacity: 0.7,
-            dashArray: '8,6'
+        // Тимчасова пунктирна лінія між зупинками (поки OSRM не завантажить реальний маршрут)
+        const fallback = L.polyline(latlngs, {
+            color: '#94a3b8', weight: 3, opacity: 0.5, dashArray: '8,6'
         }).addTo(map);
+        map.fitBounds(fallback.getBounds(), {padding: [40, 40]});
 
-        // Підгін масштабу під всі точки
-        map.fitBounds(polyline.getBounds(), {padding: [40, 40]});
+        // Реальний маршрут по дорогах через публічний OSRM-сервер
+        const coords = latlngs.map(p => p[1] + ',' + p[0]).join(';');
+        const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+        fetch(url)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data || !data.routes || !data.routes.length) return;
+                const realLine = L.geoJSON(data.routes[0].geometry, {
+                    style: { color: '#4f46e5', weight: 5, opacity: 0.85 }
+                }).addTo(map);
+                fallback.remove();
+                map.fitBounds(realLine.getBounds(), {padding: [40, 40]});
+            })
+            .catch(() => {});
     }
 </script>
 {% endblock %}

@@ -36,7 +36,7 @@
                             </div>
                             <div class="trip-arrow"></div>
                             <div class="text-end">
-                                <div class="trip-time text-muted">{{ order.trip.route.duration_hours }} год</div>
+                                <div class="trip-time">{{ order.trip.arrival_at|date:"H:i" }}</div>
                                 <div class="trip-time-label">{{ order.trip.route.destination_city }}</div>
                             </div>
                         </div>
@@ -103,13 +103,98 @@
                 </div>
             </div>
 
+            {% if order.status == 'pending' or order.status == 'confirmed' %}
+            <div class="card p-3 border-0 shadow-sm mt-3" style="background: linear-gradient(135deg,#f0f9ff,#e0f2fe);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1" style="color: var(--primary);"><i class="bi bi-credit-card"></i> Сплатити онлайн</h6>
+                        <div class="small text-muted">Безпечна оплата карткою прямо зараз.</div>
+                    </div>
+                    <a href="{% url 'portal:payment_form' order.id %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-shield-lock"></i> Сплатити
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if order.status == 'paid' or order.status == 'in_progress' or order.status == 'confirmed' %}
+            <div class="card p-3 border-0 shadow-sm mt-3" style="background: linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1" style="color: #047857;"><i class="bi bi-broadcast"></i> Відстеження рейсу</h6>
+                        <div class="small text-muted">Дивіться позицію автобуса у реальному часі.</div>
+                    </div>
+                    <a href="{% url 'portal:trip_track' order.trip.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-geo-alt-fill"></i> Стежити
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="alert alert-info border-0 mt-3 small">
                 <i class="bi bi-info-circle"></i>
                 Збережіть PDF-квитки у телефоні. На посадці пред'явіть водію разом з документом, що посвідчує особу.
             </div>
+
+            {% if order.status == 'completed' %}
+            <div class="card p-3 border-0 shadow-sm mt-3" style="background: var(--primary-soft);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1" style="color: var(--primary);">
+                            <i class="bi bi-star-fill"></i> Поділіться враженнями
+                        </h6>
+                        <div class="small text-muted">Ваша оцінка допоможе іншим обрати маршрут.</div>
+                    </div>
+                    <a href="{% url 'portal:leave_review' order.id %}" class="btn btn-primary">
+                        <i class="bi bi-pencil-square"></i> Залишити відгук
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_cancel %}
+            <div class="card p-3 border-danger-subtle mt-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-1 text-danger">Скасування замовлення</h6>
+                        <div class="small text-muted">Можливе не пізніше ніж за 24 години до рейсу.</div>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-x-circle"></i> Скасувати
+                    </button>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 </section>
+
+{% if can_cancel %}
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Скасувати замовлення?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Ви скасовуєте замовлення <b>{{ order.order_number }}</b> на маршрут
+                   <b>{{ order.trip.route.name }}</b> ({{ order.trip.departure_at|date:"d.m.Y H:i" }}).</p>
+                <p class="text-muted small mb-0">Кошти буде повернуто на картку протягом 5 робочих днів
+                    згідно з умовами перевезення.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Не скасовувати</button>
+                <form method="post" action="{% url 'portal:cancel_booking' order.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Так, скасувати</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

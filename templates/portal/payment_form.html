@@ -1,0 +1,229 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Оплата замовлення {{ order.order_number }} | TransAuto Travel{% endblock %}
+
+{% block extra_head %}
+<style>
+    .pay-card {
+        background: linear-gradient(135deg, #0c4a6e, #075985 50%, #0891b2);
+        color: white;
+        border-radius: 16px;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+        min-height: 200px;
+        box-shadow: 0 12px 32px rgba(7, 89, 133, 0.3);
+    }
+    .pay-card::before {
+        content: '';
+        position: absolute;
+        top: -40px; right: -40px;
+        width: 150px; height: 150px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .pay-card::after {
+        content: '';
+        position: absolute;
+        bottom: -60px; left: -60px;
+        width: 200px; height: 200px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+    .pay-card .chip {
+        width: 40px; height: 30px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        border-radius: 6px;
+        margin-bottom: 24px;
+    }
+    .pay-card .card-num {
+        font-size: 24px; letter-spacing: 3px;
+        font-family: 'Courier New', monospace;
+        margin-bottom: 16px;
+        position: relative;
+        z-index: 1;
+    }
+    .pay-card .label {
+        font-size: 10px; opacity: 0.7;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .pay-card .value {
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        position: relative;
+        z-index: 1;
+    }
+    .demo-banner {
+        background: #fef3c7;
+        border: 1px solid #fbbf24;
+        color: #78350f;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="section-sm">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+
+            <div class="d-flex align-items-center mb-3">
+                <a href="{% url 'portal:booking_done' order.id %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Назад
+                </a>
+                <h3 class="mb-0 ms-3">Онлайн-оплата</h3>
+            </div>
+
+            <div class="demo-banner">
+                <i class="bi bi-info-circle-fill"></i>
+                <b>Демо-режим:</b> це симуляція платіжного шлюзу для дипломної роботи. Реальні гроші не списуються. Введіть будь-який номер картки з 13-19 цифр. Картка, що закінчується на 0000, буде відхилена для тестування.
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="pay-card mb-3">
+                        <div class="chip"></div>
+                        <div class="card-num" id="cardPreview">•••• •••• •••• ••••</div>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="label">Власник</div>
+                                <div class="value" id="holderPreview">ВАШЕ ІМ'Я</div>
+                            </div>
+                            <div>
+                                <div class="label">До</div>
+                                <div class="value" id="expiryPreview">MM/YY</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm p-3">
+                        <h6 class="text-muted small text-uppercase mb-2">Замовлення</h6>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Номер</span>
+                            <b>{{ order.order_number }}</b>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Маршрут</span>
+                            <span class="text-end">{{ order.trip.route.name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Дата</span>
+                            <span>{{ order.trip.departure_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Квитків</span>
+                            <span>{{ order.tickets.count }}</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fs-5">До сплати</span>
+                            <div>
+                                <span style="font-size:24px; font-weight:800; color: var(--primary);">{{ order.total_price|floatformat:2 }}</span>
+                                <span class="fs-6">{{ order.currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="mb-3"><i class="bi bi-credit-card-2-front text-primary"></i> Дані картки</h5>
+
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} small">{{ message }}</div>
+                        {% endfor %}
+                        {% endif %}
+
+                        <form method="post" action="{% url 'portal:payment_process' order.id %}" id="payForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Номер картки</label>
+                                <input type="text" class="form-control form-control-lg" name="card_number"
+                                       id="cardInput" inputmode="numeric" maxlength="23"
+                                       placeholder="1234 5678 9012 3456" required autocomplete="cc-number">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Власник картки</label>
+                                <input type="text" class="form-control" name="card_holder" id="holderInput"
+                                       placeholder="IVAN PETRENKO" required autocomplete="cc-name">
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-7">
+                                    <label class="form-label small fw-bold">Термін дії</label>
+                                    <input type="text" class="form-control" name="card_expiry" id="expiryInput"
+                                           placeholder="MM/YY" maxlength="5" required autocomplete="cc-exp">
+                                </div>
+                                <div class="col-5">
+                                    <label class="form-label small fw-bold">CVV / CVC</label>
+                                    <input type="password" class="form-control" name="card_cvv"
+                                           inputmode="numeric" maxlength="4" placeholder="•••" required autocomplete="cc-csc">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="payBtn">
+                                <i class="bi bi-shield-lock"></i>
+                                Сплатити {{ order.total_price|floatformat:2 }} {{ order.currency }}
+                            </button>
+                            <div class="text-center small text-muted mt-3">
+                                <i class="bi bi-shield-check"></i>
+                                Захищене зашифроване зєднання. Оплата проходить через сертифікований платіжний шлюз.
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const cardInput = document.getElementById('cardInput');
+    const cardPreview = document.getElementById('cardPreview');
+    const holderInput = document.getElementById('holderInput');
+    const holderPreview = document.getElementById('holderPreview');
+    const expiryInput = document.getElementById('expiryInput');
+    const expiryPreview = document.getElementById('expiryPreview');
+    const payForm = document.getElementById('payForm');
+    const payBtn = document.getElementById('payBtn');
+
+    // Форматування номера картки: групами по 4
+    cardInput.addEventListener('input', function(e) {
+        let v = e.target.value.replace(/\D/g, '').slice(0, 19);
+        let formatted = v.match(/.{1,4}/g)?.join(' ') || '';
+        e.target.value = formatted;
+        cardPreview.textContent = (formatted + ' •••• •••• •••• ••••').slice(0, 19);
+    });
+
+    holderInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+        holderPreview.textContent = e.target.value || "ВАШЕ ІМ'Я";
+    });
+
+    // Форматування MM/YY
+    expiryInput.addEventListener('input', function(e) {
+        let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+        if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+        e.target.value = v;
+        expiryPreview.textContent = v || 'MM/YY';
+    });
+
+    // Анімація завантаження при сабміті
+    payForm.addEventListener('submit', function() {
+        payBtn.disabled = true;
+        payBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Обробка платежу...';
+    });
+</script>
+{% endblock %}

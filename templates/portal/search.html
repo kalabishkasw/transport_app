@@ -2,6 +2,23 @@
 
 {% block title %}Пошук рейсів | TransAuto Travel{% endblock %}
 
+{% block extra_head %}
+<style>
+    .alt-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+    .alt-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(3, 105, 161, 0.18) !important;
+        border-left-color: var(--primary);
+    }
+    .bg-primary-subtle {
+        background: var(--primary-soft);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="bg-light section-sm border-bottom">
@@ -10,22 +27,46 @@
         <form method="get" action="{% url 'portal:search' %}" class="card p-3 mt-3 border-0 shadow-sm">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label small text-muted">Звідки</label>
-                    {{ form.origin }}
+                    <label class="form-label small text-muted">{{ T.search_from }}</label>
+                    <div class="city-autocomplete">
+                        <i class="bi bi-geo-alt city-icon"></i>
+                        <input type="text" name="origin" required
+                               class="form-control city-input" autocomplete="off"
+                               placeholder="{{ T.search_from_ph }}"
+                               value="{{ form.origin.value|default:'' }}">
+                        <div class="city-suggestions"></div>
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small text-muted">Куди</label>
-                    {{ form.destination }}
+                    <label class="form-label small text-muted">{{ T.search_to }}</label>
+                    <div class="city-autocomplete">
+                        <i class="bi bi-geo-alt city-icon"></i>
+                        <input type="text" name="destination" required
+                               class="form-control city-input" autocomplete="off"
+                               placeholder="{{ T.search_to_ph }}"
+                               value="{{ form.destination.value|default:'' }}">
+                        <div class="city-suggestions"></div>
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small text-muted">Дата</label>
-                    {{ form.date }}
+                    <label class="form-label small text-muted">{{ T.search_date }}</label>
+                    {# form.date.value повертає сире значення з GET-параметра у форматі Y-m-d. #}
+                    {# Фільтр |date не вживаємо: він не працює на строках. #}
+                    <input type="date" name="date" class="form-control flatpickr"
+                           value="{{ request.GET.date|default:'' }}">
                 </div>
                 <div class="col-md-2 d-grid">
-                    <button class="btn btn-primary"><i class="bi bi-search"></i> Шукати</button>
+                    <button class="btn btn-primary"><i class="bi bi-search"></i> {{ T.search_btn }}</button>
                 </div>
             </div>
         </form>
+        {{ cities_with_country|json_script:"cities-data" }}
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const cities = JSON.parse(document.getElementById('cities-data').textContent);
+                document.querySelectorAll('.city-input').forEach(inp => setupCityAutocomplete(inp, cities));
+            });
+        </script>
     </div>
 </section>
 
@@ -50,7 +91,7 @@
                                         </div>
                                         <div class="trip-arrow"></div>
                                         <div class="text-end">
-                                            <div class="trip-time text-muted">{{ trip.route.duration_hours }} год</div>
+                                            <div class="trip-time">{{ trip.arrival_at|date:"H:i" }}</div>
                                             <div class="trip-time-label">{{ trip.route.destination_city }}</div>
                                         </div>
                                     </div>
@@ -76,14 +117,144 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="text-center py-5">
+                <div class="text-center pt-4 pb-3">
                     <i class="bi bi-search" style="font-size:48px; color:#cbd5e1;"></i>
                     <h4 class="mt-3">Рейсів не знайдено</h4>
-                    <p class="text-muted">Спробуйте змінити параметри пошуку або обрати іншу дату.</p>
+                    <p class="text-muted mb-4">
+                        За запитом
+                        {% if searched_origin %}<b>{{ searched_origin }}</b>{% endif %}
+                        {% if searched_origin and searched_destination %} → {% endif %}
+                        {% if searched_destination %}<b>{{ searched_destination }}</b>{% endif %}
+                        {% if searched_date %} на <b>{{ searched_date|date:"d.m.Y" }}</b>{% endif %}
+                        нічого не вдалось знайти. Подивіться альтернативи нижче.
+                    </p>
+                </div>
+
+                {# 1. Сусідні дати - найкорисніша підказка #}
+                {% if alternatives.nearby_dates %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-calendar-week text-primary"></i>
+                        Той самий маршрут на сусідні дати
+                    </h5>
+                    <div class="row g-3">
+                        {% for trip in alternatives.nearby_dates %}
+                        <div class="col-md-6 col-lg-4">
+                            <a href="{% url 'portal:trip_detail' trip.id %}" class="text-decoration-none">
+                                <div class="card border-0 shadow-sm h-100 alt-card">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge bg-primary-subtle text-primary">
+                                                <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y" }}
+                                            </span>
+                                            <span class="text-muted small">{{ trip.departure_at|date:"H:i" }}</span>
+                                        </div>
+                                        <div class="fw-semibold text-dark">
+                                            {{ trip.route.origin_city }} → {{ trip.route.destination_city }}
+                                        </div>
+                                        <div class="small text-muted">
+                                            <i class="bi bi-clock"></i> {{ trip.route.duration_hours }} год ·
+                                            <i class="bi bi-people"></i> {{ trip.free }} вільних
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span class="fw-bold" style="color: var(--primary);">
+                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                            </span>
+                                            <span class="small text-primary">
+                                                Деталі <i class="bi bi-arrow-right"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# 2. Інші рейси у той самий пункт призначення #}
+                {% if alternatives.same_destination %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-geo-alt-fill text-success"></i>
+                        Інші рейси
+                        {% if searched_destination %}у місто <b>{{ searched_destination }}</b>{% else %}за призначенням{% endif %}
+                    </h5>
+                    <div class="row g-3">
+                        {% for trip in alternatives.same_destination %}
+                        <div class="col-md-6 col-lg-3">
+                            <a href="{% url 'portal:trip_detail' trip.id %}" class="text-decoration-none">
+                                <div class="card border-0 shadow-sm h-100 alt-card">
+                                    <div class="card-body p-3">
+                                        <div class="small text-muted mb-1">
+                                            <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y H:i" }}
+                                        </div>
+                                        <div class="fw-semibold text-dark mb-1">
+                                            {{ trip.route.origin_city }} →<br>{{ trip.route.destination_city }}
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span class="fw-bold" style="color: var(--primary);">
+                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# 3. Інші напрями з міста відправлення #}
+                {% if alternatives.same_origin %}
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-signpost-split text-info"></i>
+                        Інші напрями
+                        {% if searched_origin %}з міста <b>{{ searched_origin }}</b>{% else %}з вашого міста{% endif %}
+                    </h5>
+                    <div class="row g-3">
+                        {% for trip in alternatives.same_origin %}
+                        <div class="col-md-6 col-lg-3">
+                            <a href="{% url 'portal:trip_detail' trip.id %}" class="text-decoration-none">
+                                <div class="card border-0 shadow-sm h-100 alt-card">
+                                    <div class="card-body p-3">
+                                        <div class="small text-muted mb-1">
+                                            <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y H:i" }}
+                                        </div>
+                                        <div class="fw-semibold text-dark mb-1">
+                                            {{ trip.route.origin_city }} →<br>{{ trip.route.destination_city }}
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span class="fw-bold" style="color: var(--primary);">
+                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not alternatives.nearby_dates and not alternatives.same_destination and not alternatives.same_origin %}
+                <div class="text-center py-3">
+                    <p class="text-muted">На жаль, схожих рейсів теж не знайшлось.</p>
                     <a href="{% url 'portal:home' %}" class="btn btn-outline-primary">
                         <i class="bi bi-arrow-left"></i> На головну
                     </a>
                 </div>
+                {% else %}
+                <div class="text-center mt-4">
+                    <a href="{% url 'portal:home' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> На головну
+                    </a>
+                </div>
+                {% endif %}
             {% endif %}
         {% else %}
             <div class="text-center py-5">

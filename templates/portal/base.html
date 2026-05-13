@@ -12,13 +12,15 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/airbnb.css">
 
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-dark: #4338ca;
-            --primary-soft: #eef2ff;
-            --accent: #f59e0b;
+            --primary: #0369a1;
+            --primary-dark: #075985;
+            --primary-soft: #e0f2fe;
+            --accent: #06b6d4;
             --bg: #ffffff;
             --bg-soft: #f8fafc;
             --text: #0f172a;
@@ -44,18 +46,44 @@
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(8px);
             border-bottom: 1px solid var(--border);
-            padding: 14px 0;
-            position: sticky; top: 0; z-index: 100;
+            padding: 10px 0;
+            position: sticky; top: 0; z-index: 1050;
         }
+        /* Leaflet за замовчуванням має z-index 400-800 для тайлів і контролів,
+           тому карта може залазити на sticky-навігацію. Опускаємо її контейнер. */
+        .leaflet-container,
+        .leaflet-pane,
+        .leaflet-top, .leaflet-bottom {
+            z-index: 1 !important;
+        }
+        .leaflet-control { z-index: 2 !important; }
+        .leaflet-popup-pane { z-index: 3 !important; }
         .navbar-brand-public {
-            font-size: 20px; font-weight: 700;
+            font-size: 22px; font-weight: 700;
             color: var(--text);
             text-decoration: none;
-            display: inline-flex; align-items: center; gap: 8px;
+            display: inline-flex; align-items: center; gap: 12px;
         }
         .navbar-brand-public i {
-            color: var(--primary); font-size: 24px;
+            color: var(--primary); font-size: 28px;
         }
+        .navbar-brand-public img {
+            height: 70px; width: auto;
+            transition: transform .3s;
+        }
+        .navbar-brand-public:hover img { transform: scale(1.08); }
+
+        /* Прапорці-картинки у перемикачі мов */
+        .flag-img {
+            width: 22px;
+            height: auto;
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.08);
+            vertical-align: middle;
+            display: inline-block;
+        }
+        .lang-switcher .btn { padding: 6px 10px; }
+        .lang-switcher .dropdown-item { padding: 8px 14px; }
         .nav-link-public {
             color: var(--muted); text-decoration: none;
             padding: 8px 14px; border-radius: 8px;
@@ -81,26 +109,55 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
-            color: #fff;
-            padding: 70px 0 100px;
             position: relative;
+            background-image:
+                linear-gradient(135deg, rgba(12,74,110,0.65) 0%, rgba(7,89,133,0.55) 50%, rgba(8,145,178,0.55) 100%),
+                url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1600&q=80');
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+            padding: 90px 0 110px;
             overflow: hidden;
         }
         .hero::before {
             content: '';
             position: absolute; inset: 0;
             background-image:
-                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0, transparent 40%),
-                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0, transparent 40%);
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.10) 0, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.08) 0, transparent 40%);
+            animation: heroFloat 22s ease-in-out infinite alternate;
         }
-        .hero-content { position: relative; z-index: 1; }
+        @keyframes heroFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(20px, -10px) scale(1.05); }
+            100% { transform: translate(-15px, 15px) scale(1); }
+        }
+        .hero-content {
+            position: relative; z-index: 1;
+            animation: heroEnter 0.9s cubic-bezier(.16,.84,.44,1);
+        }
+        @keyframes heroEnter {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: none; }
+        }
         .hero h1 {
-            font-size: 48px; font-weight: 800;
-            line-height: 1.1; margin-bottom: 16px;
-            letter-spacing: -0.5px;
+            font-size: 52px; font-weight: 800;
+            line-height: 1.05; margin-bottom: 18px;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 30px rgba(0,0,0,0.18);
         }
-        .hero p { font-size: 18px; opacity: 0.92; max-width: 580px; margin: 0 auto 30px; }
+        .hero p { font-size: 18px; opacity: 0.95; max-width: 620px; margin: 0 auto 30px; }
+        .hero-scroll-hint {
+            position: absolute; left: 50%; bottom: 18px;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            animation: scrollBounce 2s ease-in-out infinite;
+            z-index: 1; font-size: 24px;
+        }
+        @keyframes scrollBounce {
+            0%, 100% { transform: translate(-50%, 0); opacity: 0.6; }
+            50%      { transform: translate(-50%, 8px); opacity: 1; }
+        }
 
         .search-card {
             background: #fff;
@@ -246,30 +303,289 @@
             .trip-card { grid-template-columns: 1fr; }
             .trip-action { text-align: left; }
         }
+
+        /* ====== City autocomplete ====== */
+        .city-autocomplete { position: relative; }
+        .city-autocomplete .form-control { padding-left: 40px; }
+        .city-autocomplete .city-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--primary); font-size: 18px; pointer-events: none; z-index: 2;
+        }
+        .city-suggestions {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(15,23,42,0.12);
+            max-height: 320px; overflow-y: auto;
+            z-index: 1000;
+            padding: 6px;
+        }
+        .city-suggestions .city-section {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--muted); font-weight: 600;
+            padding: 8px 12px 4px;
+        }
+        .city-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background .12s;
+        }
+        .city-item:hover, .city-item.active {
+            background: var(--primary-soft);
+        }
+        .city-item .city-pin {
+            width: 32px; height: 32px;
+            background: var(--primary-soft); color: var(--primary);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex: none;
+        }
+        .city-item .city-name {
+            font-weight: 600; color: var(--text);
+            font-size: 15px; line-height: 1.2;
+        }
+        .city-item .city-country {
+            color: var(--muted); font-size: 12px;
+        }
+
+        /* Flatpickr тема airbnb легке підлаштування */
+        .flatpickr-calendar.airbnb { font-family: 'Inter', sans-serif; }
+        .flatpickr-day.selected, .flatpickr-day.selected:hover {
+            background: var(--primary); border-color: var(--primary);
+        }
+        .flatpickr-day.today { border-color: var(--primary); color: var(--primary); }
+        .flatpickr-day.today:hover { background: var(--primary); color: #fff; }
+        .flatpickr-input + .flatpickr-mobile,
+        .flatpickr-input ~ .form-control { cursor: pointer; }
+
+        /* ========== Motion Design ========== */
+
+        /* Глобальний плавний transition для багатьох елементів */
+        .btn, .card, .form-control, .form-select, .feature-box, .testimonial-card, .pill, .nav-link-public {
+            transition: all .25s cubic-bezier(.16,.84,.44,1);
+        }
+
+        /* Pulse-анімація для головного CTA на лендінгу */
+        .btn-primary.btn-lg {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary.btn-lg::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: rgba(255,255,255,0.25);
+            transform: translateX(-100%);
+            transition: transform .5s;
+        }
+        .btn-primary.btn-lg:hover::before {
+            transform: translateX(100%);
+        }
+
+        /* Hover lift на feature-box і testimonial-card */
+        .feature-box:hover {
+            transform: translateY(-4px);
+        }
+        .feature-box:hover .feature-icon {
+            transform: scale(1.1) rotate(-4deg);
+        }
+        .feature-icon { transition: transform .3s; }
+
+        /* Анімовані pills (зручності) */
+        .pill { transition: all .2s; }
+        .pill:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(79,70,229,0.15); }
+
+        /* Smooth dropdown menus */
+        .dropdown-menu.show {
+            animation: dropDownIn 0.18s ease-out;
+        }
+        @keyframes dropDownIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* Search-card focus aura */
+        .search-card .form-control:focus,
+        .search-card .form-control-lg:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79,70,229,0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Кнопка "Купити квиток" у trip-card з ripple */
+        .trip-card .btn-primary {
+            position: relative; overflow: hidden;
+        }
+        .trip-card:hover .trip-arrow {
+            background: var(--primary);
+        }
+        .trip-card:hover .trip-arrow::before {
+            border-left-color: var(--primary);
+        }
+        .trip-arrow, .trip-arrow::before { transition: all .25s; }
+
+        /* Skeleton loader (для майбутніх async секцій) */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: skeletonWave 1.5s infinite;
+            border-radius: 4px;
+        }
+        @keyframes skeletonWave {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* SVG декоративна хвиля під hero */
+        .hero-wave {
+            position: absolute; bottom: -1px; left: 0; right: 0;
+            line-height: 0; pointer-events: none;
+        }
+        .hero-wave svg { width: 100%; height: 70px; display: block; }
+
+        /* Анімований логотип у топбарі */
+        .navbar-brand-public i { transition: transform .3s; }
+        .navbar-brand-public:hover i { transform: rotate(-8deg) scale(1.1); }
+
+        /* Section title decorator */
+        .section-title { position: relative; }
+        .section-title.text-center::after {
+            content: '';
+            display: block;
+            width: 56px; height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 2px;
+            margin: 12px auto 0;
+        }
+
+        /* Page transitions (fade при переході) */
+        @keyframes fadePageIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: none; }
+        }
+        main { animation: fadePageIn .4s ease-out; }
+
+        /* Легкий scroll behavior */
+        html { scroll-behavior: smooth; }
+
+        /* ----- Motion design ----- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        main { animation: fadeInUp .4s ease-out; }
+        .hero-content { animation: fadeInUp .7s ease-out; }
+        .search-card { animation: scaleIn .5s ease-out .2s backwards; }
+        .trip-card { animation: fadeInUp .4s ease-out backwards; }
+        .auth-card { animation: scaleIn .4s ease-out; }
+
+        a, button, .btn { transition: all .15s ease-out; }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+
+        html { scroll-behavior: smooth; }
+
+        /* Скелетон для загрузки */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer {
+            from { background-position: 200% 0; }
+            to { background-position: -200% 0; }
+        }
+
+        /* ----- Print styles ----- */
+        @media print {
+            body { background: #fff !important; }
+            .navbar-public, footer.site-footer, #promo-banner,
+            #cookie-banner, .btn { display: none !important; }
+            main { animation: none; }
+            .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+        }
     </style>
 
     {% block extra_head %}{% endblock %}
 </head>
 <body>
 
+<div id="promo-banner" style="background: linear-gradient(90deg,#075985,#0891b2); color:#fff;
+     padding: 10px 0; font-size:13px; position: relative;">
+    <div class="container text-center" style="padding-right:48px; padding-left:48px;">
+        <span>🎉 {{ T.promo_text }} <b style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px;">SUMMER15</b></span>
+    </div>
+    <button onclick="document.getElementById('promo-banner').remove()"
+            style="position:absolute; right:16px; top:50%; transform:translateY(-50%);
+                   background:none; border:none; color:#fff; font-size:22px; line-height:1;
+                   cursor:pointer; padding:0 8px;"
+            aria-label="{{ T.promo_close }}">
+        ×
+    </button>
+</div>
+
 <header class="navbar-public">
     <div class="container d-flex align-items-center">
         <a href="{% url 'portal:home' %}" class="navbar-brand-public">
-            <i class="bi bi-bus-front-fill"></i> TransAuto Travel
+            <img src="{% static 'portal/img/logo.png' %}" alt="TransAuto Travel"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <i class="bi bi-bus-front-fill" style="display:none;"></i>
+            TransAuto Travel
         </a>
         <nav class="d-none d-md-flex ms-4 gap-1">
-            <a href="{% url 'portal:home' %}" class="nav-link-public">Головна</a>
-            <a href="{% url 'portal:search' %}" class="nav-link-public">Пошук рейсу</a>
+            <a href="{% url 'portal:home' %}" class="nav-link-public">{{ T.nav_home }}</a>
+            <a href="{% url 'portal:search' %}" class="nav-link-public">{{ T.nav_search }}</a>
         </nav>
         <div class="ms-auto d-flex gap-2 align-items-center">
+            <div class="dropdown lang-switcher">
+                {# Прапорці через flagcdn.com (emoji-flags на Windows показуються як літерні пари UA/GB) #}
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if LANG == 'en' %}
+                        <img src="https://flagcdn.com/w40/gb.png" srcset="https://flagcdn.com/w80/gb.png 2x"
+                             class="flag-img" alt="EN">
+                    {% else %}
+                        <img src="https://flagcdn.com/w40/ua.png" srcset="https://flagcdn.com/w80/ua.png 2x"
+                             class="flag-img" alt="UA">
+                    {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 {% if LANG == 'uk' %}active{% endif %}"
+                           href="{% url 'portal:set_language' 'uk' %}">
+                            <img src="https://flagcdn.com/w40/ua.png" srcset="https://flagcdn.com/w80/ua.png 2x"
+                                 class="flag-img" alt="">
+                            Українська
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 {% if LANG == 'en' %}active{% endif %}"
+                           href="{% url 'portal:set_language' 'en' %}">
+                            <img src="https://flagcdn.com/w40/gb.png" srcset="https://flagcdn.com/w80/gb.png 2x"
+                                 class="flag-img" alt="">
+                            English
+                        </a>
+                    </li>
+                </ul>
+            </div>
             {% if user.is_authenticated %}
                 <a href="{% url 'portal:account' %}" class="nav-link-public">
                     <i class="bi bi-person-circle"></i> {{ user.first_name|default:user.username }}
                 </a>
-                <a href="{% url 'portal:logout' %}" class="btn btn-sm btn-outline-secondary">Вихід</a>
+                <a href="{% url 'portal:logout' %}" class="btn btn-sm btn-outline-secondary">{{ T.nav_logout }}</a>
             {% else %}
-                <a href="{% url 'portal:login' %}" class="nav-link-public">Вхід</a>
-                <a href="{% url 'portal:register' %}" class="btn btn-sm btn-primary">Реєстрація</a>
+                <a href="{% url 'portal:login' %}" class="nav-link-public">{{ T.nav_login }}</a>
+                <a href="{% url 'portal:register' %}" class="btn btn-sm btn-primary">{{ T.nav_register }}</a>
             {% endif %}
         </div>
     </div>
@@ -292,32 +608,181 @@
 
 <footer class="site-footer">
     <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <h6><i class="bi bi-bus-front-fill"></i> TransAuto Travel</h6>
-                <p class="small">Сучасні міжнародні автобусні перевезення з України до Європи.</p>
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <h6>
+                    <img src="{% static 'portal/img/logo.png' %}" alt=""
+                         style="height:40px; width:auto; vertical-align:middle; margin-right:8px; filter: invert(1); mix-blend-mode: screen;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                    <i class="bi bi-bus-front-fill" style="display:none;"></i>
+                    TransAuto Travel
+                </h6>
+                <p class="small">{{ T.footer_about }}</p>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="#" class="text-white-50" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-white-50" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-white-50" aria-label="Telegram"><i class="bi bi-telegram"></i></a>
+                    <a href="#" class="text-white-50" aria-label="Viber"><i class="bi bi-chat-dots"></i></a>
+                </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <h6>Сервіс</h6>
+            <div class="col-lg-2 col-md-6">
+                <h6>{{ T.footer_service }}</h6>
                 <ul class="list-unstyled small">
-                    <li><a href="{% url 'portal:search' %}">Пошук рейсу</a></li>
-                    <li><a href="{% url 'portal:account' %}">Мій кабінет</a></li>
+                    <li class="mb-1"><a href="{% url 'portal:search' %}">{{ T.nav_search }}</a></li>
+                    <li class="mb-1"><a href="{% url 'portal:account' %}">{{ T.nav_account }}</a></li>
+                    <li class="mb-1"><a href="{% url 'portal:register' %}">{{ T.nav_register }}</a></li>
                 </ul>
             </div>
-            <div class="col-md-4 mb-3">
-                <h6>Контакти</h6>
+            <div class="col-lg-2 col-md-6">
+                <h6>{{ T.footer_contacts }}</h6>
                 <ul class="list-unstyled small">
-                    <li><i class="bi bi-telephone"></i> +380 (00) 000 00 00</li>
-                    <li><i class="bi bi-envelope"></i> info@transauto.travel</li>
+                    <li class="mb-1"><i class="bi bi-telephone"></i> +380 (00) 000 00 00</li>
+                    <li class="mb-1"><i class="bi bi-envelope"></i> info@transauto.travel</li>
+                    <li class="mb-1"><i class="bi bi-geo-alt"></i> {{ T.footer_address }}</li>
                 </ul>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <h6>{{ T.footer_newsletter }}</h6>
+                <p class="small">{{ T.footer_newsletter_text }}</p>
+                <form id="newsletter-form" class="d-flex gap-2 mt-2"
+                      onsubmit="event.preventDefault(); document.getElementById('newsletter-msg').textContent='{{ T.footer_subscribe_ok }}'; this.reset();">
+                    <input type="email" required placeholder="email@example.com"
+                           class="form-control form-control-sm bg-transparent text-white"
+                           style="border-color:#1e293b;">
+                    <button type="submit" class="btn btn-sm btn-primary">OK</button>
+                </form>
+                <div id="newsletter-msg" class="small mt-2" style="color:#10b981;"></div>
             </div>
         </div>
         <hr style="border-color:#1e293b">
-        <div class="small text-center">© {% now "Y" %} TransAuto Travel. Усі права захищені.</div>
+        <div class="row small">
+            <div class="col-md-6">© {% now "Y" %} TransAuto Travel. {{ T.footer_rights }}</div>
+            <div class="col-md-6 text-md-end">
+                <a href="#" class="text-white-50 me-3">{{ T.footer_privacy }}</a>
+                <a href="#" class="text-white-50">{{ T.footer_terms }}</a>
+            </div>
+        </div>
     </div>
 </footer>
 
+<div id="cookie-banner" class="position-fixed bottom-0 start-0 end-0 m-3 p-3 bg-white shadow"
+     style="border-radius: 12px; max-width: 460px; display:none; z-index: 1050;">
+    <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-cookie text-primary" style="font-size:28px;"></i>
+        <div>
+            <div class="fw-semibold mb-1">{{ T.cookie_title }}</div>
+            <p class="small text-muted mb-2">{{ T.cookie_text }}</p>
+            <div class="d-flex gap-2">
+                <button id="cookie-accept" class="btn btn-primary btn-sm">{{ T.cookie_accept }}</button>
+                <button id="cookie-reject" class="btn btn-outline-secondary btn-sm">{{ T.cookie_reject }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+{% if LANG == 'uk' %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/uk.js"></script>
+{% endif %}
+<script>
+    (function() {
+        const banner = document.getElementById('cookie-banner');
+        if (!banner) return;
+        if (!localStorage.getItem('cookieConsent')) {
+            setTimeout(() => banner.style.display = 'block', 800);
+        }
+        const close = (value) => {
+            localStorage.setItem('cookieConsent', value);
+            banner.style.display = 'none';
+        };
+        document.getElementById('cookie-accept').addEventListener('click', () => close('all'));
+        document.getElementById('cookie-reject').addEventListener('click', () => close('necessary'));
+    })();
+
+    // ===== Flatpickr для усіх полів дати на порталі =====
+    document.addEventListener('DOMContentLoaded', () => {
+        const lang = '{{ LANG }}';
+        // Місяці у РОДОВОМУ відмінку (для запису "9 травня 2026" замість "9 Травень 2026")
+        const UK_MONTHS_GENITIVE = [
+            'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+            'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
+        ];
+
+        document.querySelectorAll('input[type="date"], input.flatpickr').forEach(input => {
+            flatpickr(input, {
+                locale: lang === 'uk' ? 'uk' : 'default',
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: lang === 'uk' ? 'j F Y' : 'M j, Y',
+                minDate: 'today',
+                showMonths: window.innerWidth >= 992 ? 2 : 1,
+                disableMobile: true,
+                // Перевизначаємо форматування ТІЛЬКИ для українського відображення поля.
+                // Календар (заголовок місяця) залишається у називному відмінку через locale.
+                formatDate: lang === 'uk' ? (date, format) => {
+                    if (format === 'j F Y') {
+                        return `${date.getDate()} ${UK_MONTHS_GENITIVE[date.getMonth()]} ${date.getFullYear()}`;
+                    }
+                    // Дефолтне форматування для інших форматів (Y-m-d тощо)
+                    return flatpickr.formatDate(date, format);
+                } : undefined,
+            });
+        });
+    });
+
+    // ===== City autocomplete =====
+    window.setupCityAutocomplete = function(input, cities) {
+        const wrap = input.closest('.city-autocomplete');
+        if (!wrap) return;
+        const drop = wrap.querySelector('.city-suggestions');
+        if (!drop) return;
+
+        const POPULAR = ['Київ', 'Львів', 'Ужгород', 'Прага', 'Варшава', 'Берлін'];
+
+        function render(filter) {
+            const f = (filter || '').trim().toLowerCase();
+            let list;
+            let header = '';
+            if (!f) {
+                list = cities.filter(c => POPULAR.includes(c.name)).slice(0, 8);
+                header = '{{ T.section_popular|default:"Популярні напрями"|escapejs }}';
+            } else {
+                list = cities.filter(c => c.name.toLowerCase().includes(f)).slice(0, 10);
+            }
+            if (!list.length) {
+                drop.innerHTML = '<div class="city-section">—</div>';
+                drop.style.display = 'block';
+                return;
+            }
+            const items = list.map(c => `
+                <div class="city-item" data-value="${c.name}">
+                    <div class="city-pin"><i class="bi bi-geo-alt-fill"></i></div>
+                    <div>
+                        <div class="city-name">${c.name}</div>
+                        <div class="city-country">${c.country_name}</div>
+                    </div>
+                </div>
+            `).join('');
+            drop.innerHTML = (header ? `<div class="city-section">${header}</div>` : '') + items;
+            drop.style.display = 'block';
+        }
+
+        input.addEventListener('focus', () => render(input.value));
+        input.addEventListener('input', () => render(input.value));
+        input.addEventListener('blur', () => setTimeout(() => { drop.style.display = 'none'; }, 180));
+        drop.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.city-item');
+            if (item) {
+                e.preventDefault();
+                input.value = item.dataset.value;
+                drop.style.display = 'none';
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+        drop.style.display = 'none';
+    };
+</script>
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,80 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}Відгук про поїздку | TransAuto Travel{% endblock %}
+
+{% block extra_head %}
+<style>
+    .star-rating { display: inline-flex; gap: 6px; }
+    .star-rating input { display: none; }
+    .star-rating label {
+        cursor: pointer;
+        font-size: 38px;
+        color: #cbd5e1;
+        transition: color .15s, transform .15s;
+        user-select: none;
+    }
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label {
+        color: #f59e0b;
+    }
+    .star-rating label:hover { transform: scale(1.15); }
+    /* Розгортаємо у зворотньому порядку щоб :hover впливав на попередні */
+    .star-rating { flex-direction: row-reverse; justify-content: flex-end; }
+    .star-rating input:checked + label,
+    .star-rating input:checked + label ~ label { color: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-wrapper">
+    <div class="auth-card" style="max-width:560px;">
+        <a href="{% url 'portal:booking_detail' order.id %}" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left"></i> До замовлення
+        </a>
+        <h3 class="mt-2 mb-1">Відгук про поїздку</h3>
+        <div class="text-muted small mb-3">
+            {{ order.trip.route.name }} ({{ order.trip.departure_at|date:"d.m.Y" }})
+        </div>
+
+        {% if existing %}
+        <div class="alert alert-info border-0 small">
+            <i class="bi bi-info-circle"></i>
+            Ви вже залишили відгук. Ви можете його оновити нижче.
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <label class="form-label small text-muted">Ваша оцінка</label>
+            <div class="star-rating mb-4">
+                {% for i in "54321" %}
+                    <input type="radio" name="rating" id="star{{ i }}" value="{{ i }}"
+                           {% if existing and existing.rating|stringformat:"s" == i %}checked{% endif %}
+                           {% if not existing and i == "5" %}checked{% endif %}>
+                    <label for="star{{ i }}" title="{{ i }} зірок">★</label>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-muted">Заголовок (за бажанням)</label>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-muted">Коментар</label>
+                {{ form.comment }}
+                {% if form.comment.errors %}<div class="text-danger small">{{ form.comment.errors.0 }}</div>{% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                <i class="bi bi-send"></i> Надіслати відгук
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

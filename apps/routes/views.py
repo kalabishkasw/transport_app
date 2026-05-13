@@ -1,3 +1,8 @@
+"""
+views модуля маршрутів. зараз тут лише route_map - сторінка з інтерактивною
+картою конкретного маршруту (список зупинок + leaflet-полілінія через osrm).
+решта операцій з маршрутами - через core/admin.
+"""
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 

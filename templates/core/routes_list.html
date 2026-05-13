@@ -16,7 +16,7 @@
     <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
     <a href="{% url 'core:routes_list' %}" class="btn btn-outline-secondary">Скинути</a>
     <span class="ms-auto">
-        <a href="/admin/routes/route/add/" class="btn btn-primary">
+        <a href="{% url 'admin:routes_route_add' %}" class="btn btn-primary">
             <i class="bi bi-plus-lg"></i> Новий маршрут
         </a>
     </span>

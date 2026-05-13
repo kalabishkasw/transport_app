@@ -1,3 +1,4 @@
+"""appconfig модуля orders. у ready() підключаю сигнали (signals.py)"""
 from django.apps import AppConfig
 
 

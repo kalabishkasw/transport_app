@@ -1,3 +1,4 @@
+"""appconfig модуля documents (генерація pdf: квиток, посадковий лист)"""
 from django.apps import AppConfig
 
 

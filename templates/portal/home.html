@@ -1,14 +1,150 @@
 {% extends 'portal/base.html' %}
+{% load static %}
 
 {% block title %}TransAuto Travel — міжнародні автобусні рейси з України до Європи{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Компактний date-picker зі стрілками всередині поля (FlixBus-style). */
+    .date-picker-wrap {
+        position: relative;
+    }
+    .date-picker-wrap .flatpickr-friendly {
+        padding-right: 64px;
+        text-align: left;
+    }
+    .date-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        width: 26px; height: 26px;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--muted);
+        cursor: pointer;
+        border-radius: 6px;
+        font-size: 14px;
+        padding: 0;
+        transition: background .15s, color .15s;
+    }
+    .date-nav:hover { background: var(--bg-soft); color: var(--primary); }
+    .date-nav:active { transform: translateY(-50%) scale(0.92); }
+    .date-prev { right: 32px; }
+    .date-next { right: 4px; }
+
+    .stat-counter {
+        font-size: 42px;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1;
+        letter-spacing: -1px;
+    }
+    .stat-label {
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+    .testimonial-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 24px;
+        height: 100%;
+        border: 1px solid var(--border);
+        transition: transform .2s, box-shadow .2s;
+    }
+    .testimonial-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+    }
+    .testimonial-stars { color: #f59e0b; font-size: 14px; }
+
+    /* Картки популярних напрямів */
+    .city-card {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        height: 220px;
+        cursor: pointer;
+        display: block;
+        text-decoration: none;
+        /* Якщо img не завантажиться - показуємо красивий градієнтний фон */
+        background: linear-gradient(135deg, #0c4a6e, #075985 50%, #0891b2);
+    }
+    .city-card[data-color="warsaw"] { background: linear-gradient(135deg, #7c2d12, #c2410c 50%, #ea580c); }
+    .city-card[data-color="prague"] { background: linear-gradient(135deg, #4c1d95, #5b21b6 50%, #7c3aed); }
+    .city-card[data-color="berlin"] { background: linear-gradient(135deg, #831843, #be185d 50%, #db2777); }
+    .city-card[data-color="budapest"] { background: linear-gradient(135deg, #064e3b, #047857 50%, #059669); }
+    .city-card[data-color="vienna"] { background: linear-gradient(135deg, #1e3a8a, #1d4ed8 50%, #2563eb); }
+    .city-card[data-color="krakow"] { background: linear-gradient(135deg, #7f1d1d, #b91c1c 50%, #dc2626); }
+    .city-card img {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        transition: transform .6s cubic-bezier(.16,.84,.44,1);
+    }
+    .city-card:hover img { transform: scale(1.08); }
+    .city-card-overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(to top, rgba(15,23,42,0.85) 10%, rgba(15,23,42,0.1) 60%);
+        display: flex; flex-direction: column; justify-content: flex-end;
+        padding: 18px;
+        color: #fff;
+    }
+    .city-card-overlay h5 { margin: 0 0 4px; font-weight: 700; }
+    .city-card-overlay .small { opacity: 0.85; }
+    .city-card .pill-corner {
+        position: absolute; top: 14px; right: 14px;
+        background: rgba(255,255,255,0.95); color: var(--primary);
+        padding: 4px 10px; border-radius: 100px;
+        font-size: 12px; font-weight: 600;
+    }
+    .avatar-circle {
+        width: 44px; height: 44px;
+        background: var(--primary-soft); color: var(--primary);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700;
+    }
+    .accordion-button {
+        font-weight: 500;
+    }
+    .accordion-button:not(.collapsed) {
+        background: var(--primary-soft);
+        color: var(--primary);
+    }
+    .accordion-button:focus {
+        box-shadow: none;
+    }
+
+    /* Анімація fade-in при скролі */
+    .reveal {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity .7s, transform .7s;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+</style>
+{% endblock %}
 
 {% block content %}
 
 <section class="hero">
     <div class="container hero-content text-center">
-        <h1>Подорожуй Європою <br>зручно та надійно</h1>
-        <p>Регулярні автобусні рейси з України до Польщі, Чехії, Словаччини та інших країн ЄС.
-            Купуй квиток онлайн за хвилину.</p>
+        <h1>{{ T.hero_title }} <br>{{ T.hero_title_2 }}</h1>
+        <p>{{ T.hero_subtitle }}</p>
+    </div>
+    <div class="hero-scroll-hint">
+        <i class="bi bi-chevron-double-down"></i>
+    </div>
+    <div class="hero-wave">
+        <svg viewBox="0 0 1440 70" preserveAspectRatio="none">
+            <path fill="#ffffff"
+                  d="M0,32 C240,80 480,0 720,32 C960,64 1200,0 1440,32 L1440,70 L0,70 Z"></path>
+        </svg>
     </div>
 </section>
 
@@ -16,33 +152,88 @@
     <div class="search-card">
         <form method="get" action="{% url 'portal:search' %}">
             <div class="row g-3">
-                <div class="col-md-4">
-                    <label>Звідки</label>
-                    {{ form.origin }}
+                <div class="col-md-3">
+                    <label>{{ T.search_from }}</label>
+                    <div class="city-autocomplete">
+                        <i class="bi bi-geo-alt city-icon"></i>
+                        <input type="text" name="origin" required
+                               placeholder="{{ T.search_from_ph }}"
+                               class="form-control form-control-lg city-input"
+                               autocomplete="off"
+                               value="{{ form.origin.value|default:'' }}">
+                        <div class="city-suggestions"></div>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label>Куди</label>
-                    {{ form.destination }}
+                <div class="col-md-3">
+                    <label>{{ T.search_to }}</label>
+                    <div class="city-autocomplete">
+                        <i class="bi bi-geo-alt city-icon"></i>
+                        <input type="text" name="destination" required
+                               placeholder="{{ T.search_to_ph }}"
+                               class="form-control form-control-lg city-input"
+                               autocomplete="off"
+                               value="{{ form.destination.value|default:'' }}">
+                        <div class="city-suggestions"></div>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label>Дата</label>
-                    {{ form.date }}
+                <div class="col-md-3">
+                    <label>{{ T.search_date }}</label>
+                    <div class="date-picker-wrap">
+                        <input type="date" name="date" id="search-date" class="form-control form-control-lg flatpickr-friendly"
+                               value="{{ form.date.value|date:'Y-m-d'|default:'' }}">
+                        <button type="button" class="date-nav date-prev" tabindex="-1" aria-label="Попередній день">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button type="button" class="date-nav date-next" tabindex="-1" aria-label="Наступний день">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-2 d-grid">
+                <div class="col-md-3 d-grid">
                     <label>&nbsp;</label>
                     <button class="btn btn-primary btn-lg" type="submit">
-                        <i class="bi bi-search"></i> Знайти
+                        <i class="bi bi-search"></i> {{ T.search_btn }}
                     </button>
                 </div>
             </div>
         </form>
+        {{ cities_with_country|json_script:"cities-data" }}
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const cities = JSON.parse(document.getElementById('cities-data').textContent);
+                document.querySelectorAll('.city-input').forEach(inp => setupCityAutocomplete(inp, cities));
+            });
+        </script>
     </div>
 </div>
 
-<section class="section">
+<section class="section reveal">
     <div class="container">
-        <h2 class="section-title text-center">Найближчі рейси</h2>
-        <p class="section-subtitle text-center">Рейси, що відправляються найближчим часом</p>
+        <div class="row g-4 text-center">
+            <div class="col-md-3 col-6">
+                <div class="stat-counter" data-stat="{{ stats.passengers_total }}">0</div>
+                <div class="stat-label">{{ T.stat_passengers }}</div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-counter" data-stat="{{ stats.trips_per_month }}">0</div>
+                <div class="stat-label">{{ T.stat_trips_month }}</div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-counter" data-stat="{{ stats.routes_count }}">0</div>
+                <div class="stat-label">{{ T.stat_routes }}</div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-counter" data-stat="{{ stats.cities_count }}">0</div>
+                <div class="stat-label">{{ T.stat_cities }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section reveal" style="padding-top:0;">
+    <div class="container">
+        <h2 class="section-title text-center">{{ T.section_upcoming }}</h2>
+        <p class="section-subtitle text-center">{{ T.section_upcoming_sub }}</p>
 
         {% if popular %}
             <div class="row g-3">
@@ -58,20 +249,20 @@
                                     </div>
                                     <div class="trip-arrow"></div>
                                     <div class="text-end">
-                                        <div class="trip-time text-muted">{{ trip.route.duration_hours }} год</div>
+                                        <div class="trip-time">{{ trip.arrival_at|date:"H:i" }}</div>
                                         <div class="trip-time-label">{{ trip.route.destination_city }}</div>
                                     </div>
                                 </div>
                                 <div class="trip-meta">
                                     <span><i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y" }}</span>
                                     <span><i class="bi bi-bus-front"></i> {{ trip.vehicle.brand }} {{ trip.vehicle.model }}</span>
-                                    <span><i class="bi bi-signpost"></i> {{ trip.route.distance_km }} км</span>
+                                    <span><i class="bi bi-signpost"></i> {{ trip.route.distance_km }} {{ T.card_km }}</span>
                                 </div>
                             </div>
                             <div class="trip-action">
-                                <div class="trip-price-label">від</div>
+                                <div class="trip-price-label">{{ T.card_from }}</div>
                                 <div class="trip-price">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</div>
-                                <button class="btn btn-primary btn-sm mt-2">Купити квиток</button>
+                                <button class="btn btn-primary btn-sm mt-2">{{ T.card_buy }}</button>
                             </div>
                         </div>
                     </a>
@@ -81,48 +272,353 @@
         {% else %}
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-calendar-x" style="font-size:48px; opacity:0.3;"></i>
-                <p class="mt-3">Найближчих рейсів зараз немає.</p>
+                <p class="mt-3">{{ T.card_no_trips }}</p>
             </div>
         {% endif %}
     </div>
 </section>
 
-<section class="section bg-light">
+<section class="section bg-light reveal">
     <div class="container">
-        <h2 class="section-title text-center">Чому ми</h2>
-        <p class="section-subtitle text-center">Кілька причин подорожувати з нами</p>
+        <h2 class="section-title text-center">{{ T.section_popular }}</h2>
+        <p class="section-subtitle text-center">{{ T.section_popular_sub }}</p>
+
+        <div class="row g-3 mt-2">
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Прага" class="city-card" data-color="prague">
+                    <img src="{% static 'portal/img/city_prague.jpg' %}" alt="{{ T.city_prague }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_prague }}</h5>
+                        <div class="small">{{ T.country_cz }} · {{ T.card_from }} 80 €</div>
+                    </div>
+                    <span class="pill-corner">{{ T.badge_tourist }}</span>
+                </a>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Варшава" class="city-card" data-color="warsaw">
+                    <img src="{% static 'portal/img/city_warsaw.jpg' %}" alt="{{ T.city_warsaw }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_warsaw }}</h5>
+                        <div class="small">{{ T.country_pl }} · {{ T.card_from }} 45 €</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Берлін" class="city-card" data-color="berlin">
+                    <img src="{% static 'portal/img/city_berlin.jpg' %}" alt="{{ T.city_berlin }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_berlin }}</h5>
+                        <div class="small">{{ T.country_de }} · {{ T.card_from }} 90 €</div>
+                    </div>
+                    <span class="pill-corner">{{ T.badge_new }}</span>
+                </a>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Будапешт" class="city-card" data-color="budapest">
+                    <img src="{% static 'portal/img/city_budapest.jpg' %}" alt="{{ T.city_budapest }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_budapest }}</h5>
+                        <div class="small">{{ T.country_hu }} · {{ T.card_from }} 55 €</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Відень" class="city-card" data-color="vienna">
+                    <img src="{% static 'portal/img/city_vienna.jpg' %}" alt="{{ T.city_vienna }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_vienna }}</h5>
+                        <div class="small">{{ T.country_at }} · {{ T.card_from }} 75 €</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'portal:search' %}?destination=Краків" class="city-card" data-color="krakow">
+                    <img src="{% static 'portal/img/city_krakow.jpg' %}" alt="{{ T.city_krakow }}"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src=this.src+'.jpg';} else {this.style.display='none';}">
+                    <div class="city-card-overlay">
+                        <h5>{{ T.city_krakow }}</h5>
+                        <div class="small">{{ T.country_pl }} · {{ T.card_from }} 35 €</div>
+                    </div>
+                    <span class="pill-corner">{{ T.badge_economy }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section reveal">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-6">
+                <h2 class="section-title">{{ T.section_fleet }}</h2>
+                <p class="text-muted mb-4">{{ T.fleet_text }}</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="pill"><i class="bi bi-wifi"></i> {{ T.fleet_wifi }}</span>
+                    <span class="pill"><i class="bi bi-thermometer-half"></i> {{ T.fleet_climate }}</span>
+                    <span class="pill"><i class="bi bi-usb-symbol"></i> {{ T.fleet_usb }}</span>
+                    <span class="pill"><i class="bi bi-tv"></i> {{ T.fleet_tv }}</span>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="fleet-image-wrapper rounded-4 shadow"
+                     style="position:relative; overflow:hidden; max-height:400px; min-height:280px; height:400px; width:100%;
+                            background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0891b2 100%);
+                            display:flex; align-items:center; justify-content:center;">
+                    <img src="{% static 'portal/img/fleet.jpg' %}"
+                         alt="Mercedes-Benz Tourismo, наш автопарк"
+                         style="position:absolute; inset:0; object-fit: cover; width: 100%; height: 100%;"
+                         onerror="if(!this.dataset.tried){this.dataset.tried='1'; this.src='{% static 'portal/img/fleet.jpg.jpg' %}';} else {this.style.display='none'; this.parentElement.classList.add('show-placeholder');}">
+                    <div class="fleet-placeholder" style="display:none; text-align:center; color:white; padding:32px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="white" style="opacity:0.85;">
+                            <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+                        </svg>
+                        <div style="font-size:22px; font-weight:700; margin-top:16px; letter-spacing:0.5px;">
+                            Mercedes-Benz Tourismo
+                        </div>
+                        <div style="font-size:14px; opacity:0.85; margin-top:6px;">
+                            Setra · Neoplan · сучасний автопарк
+                        </div>
+                        <div style="margin-top:18px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                            <span style="background:rgba(255,255,255,0.18); padding:6px 12px; border-radius:20px; font-size:12px;">
+                                <i class="bi bi-wifi"></i> Wi-Fi
+                            </span>
+                            <span style="background:rgba(255,255,255,0.18); padding:6px 12px; border-radius:20px; font-size:12px;">
+                                <i class="bi bi-thermometer-half"></i> Клімат
+                            </span>
+                            <span style="background:rgba(255,255,255,0.18); padding:6px 12px; border-radius:20px; font-size:12px;">
+                                <i class="bi bi-usb-symbol"></i> USB
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    .fleet-image-wrapper.show-placeholder .fleet-placeholder { display: block !important; }
+                </style>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light reveal">
+    <div class="container">
+        <h2 class="section-title text-center">{{ T.section_why }}</h2>
+        <p class="section-subtitle text-center">{{ T.section_why_sub }}</p>
 
         <div class="row g-4 mt-2">
             <div class="col-md-3">
                 <div class="feature-box">
                     <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
-                    <h5>Надійно</h5>
-                    <p>Сучасний автопарк, технічний контроль, регулярні рейси за розкладом.</p>
+                    <h5>{{ T.feature_safe }}</h5>
+                    <p>{{ T.feature_safe_text }}</p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="feature-box">
                     <div class="feature-icon"><i class="bi bi-stars"></i></div>
-                    <h5>Комфортно</h5>
-                    <p>Wi-Fi, USB-розетки, кондиціонер, м'які крісла з відкидною спинкою.</p>
+                    <h5>{{ T.feature_comfort }}</h5>
+                    <p>{{ T.feature_comfort_text }}</p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="feature-box">
                     <div class="feature-icon"><i class="bi bi-cash-coin"></i></div>
-                    <h5>Доступно</h5>
-                    <p>Прозорі ціни, без прихованих платежів, знижки для дітей та студентів.</p>
+                    <h5>{{ T.feature_price }}</h5>
+                    <p>{{ T.feature_price_text }}</p>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="feature-box">
                     <div class="feature-icon"><i class="bi bi-laptop"></i></div>
-                    <h5>Онлайн</h5>
-                    <p>Купівля квитка за хвилину, миттєве підтвердження, електронний квиток.</p>
+                    <h5>{{ T.feature_online }}</h5>
+                    <p>{{ T.feature_online_text }}</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
+<section class="section reveal">
+    <div class="container">
+        <h2 class="section-title text-center">{{ T.section_testimonials }}</h2>
+        <p class="section-subtitle text-center">{{ T.section_testimonials_sub }}</p>
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars mb-2">★★★★★</div>
+                    <p class="mb-3">«{{ T.testimonial_1 }}»</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-circle">ОК</div>
+                        <div>
+                            <div class="fw-semibold">Олексій К.</div>
+                            <div class="small text-muted">{{ T.testimonial_route }} {{ T.city_kyiv|default:"Київ" }} - {{ T.city_warsaw }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars mb-2">★★★★★</div>
+                    <p class="mb-3">«{{ T.testimonial_2 }}»</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-circle">МШ</div>
+                        <div>
+                            <div class="fw-semibold">Марія Ш.</div>
+                            <div class="small text-muted">{{ T.testimonial_route }} {{ T.city_uzhhorod|default:"Ужгород" }} - {{ T.city_prague }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars mb-2">★★★★★</div>
+                    <p class="mb-3">«{{ T.testimonial_3 }}»</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-circle">ДР</div>
+                        <div>
+                            <div class="fw-semibold">Денис Р.</div>
+                            <div class="small text-muted">{{ T.testimonial_route }} {{ T.city_lviv|default:"Львів" }} - {{ T.city_krakow }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light reveal">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="section-title text-center">{{ T.section_faq }}</h2>
+                <p class="section-subtitle text-center">{{ T.section_faq_sub }}</p>
+
+                <div class="accordion mt-4" id="faq">
+                    {% for q, a in faq_items %}
+                    <div class="accordion-item border-0 mb-2 shadow-sm rounded">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#q{{ forloop.counter }}">
+                                {{ q }}
+                            </button>
+                        </h2>
+                        <div id="q{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#faq">
+                            <div class="accordion-body">{{ a }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // ----- Кастомний date-picker з стрілками і дружнім форматом -----
+    // Перевизначаємо flatpickr на цьому полі: показуємо "Сьогодні", "Завтра",
+    // "Вчора" або "DD MMM". Стрілки прокидають дату на ±1 день.
+    (function() {
+        const input = document.getElementById('search-date');
+        if (!input) return;
+
+        // Беремо переклади з контекст-процесора через шаблон
+        const MONTHS_SHORT = "{{ T.months_short }}".split(',');
+        // JS getDay(): 0=неділя, 1=понеділок, ..., 6=субота
+        const DAYS_SHORT = "{{ T.days_short }}".split(',');
+        const LABEL_TODAY = "{{ T.date_today }}";
+        const LABEL_TOMORROW = "{{ T.date_tomorrow }}";
+        const LABEL_YESTERDAY = "{{ T.date_yesterday }}";
+
+        function relativeLabel(date) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            const diffDays = Math.round((d - today) / 86400000);
+            const dateStr = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+            if (diffDays === 0) return `${LABEL_TODAY}, ${dateStr}`;
+            if (diffDays === 1) return `${LABEL_TOMORROW}, ${dateStr}`;
+            if (diffDays === -1) return `${LABEL_YESTERDAY}, ${dateStr}`;
+            // Решта днів: "пн, 18 трав" / "Mon, May 18"
+            return `${DAYS_SHORT[d.getDay()]}, ${dateStr}`;
+        }
+
+        // Чекаємо щоб flatpickr ініціалізувався (з base.html DOMContentLoaded),
+        // потім перевизначаємо його formatDate для цього інпуту.
+        function tryWire() {
+            if (!input._flatpickr) {
+                setTimeout(tryWire, 50);
+                return;
+            }
+            const fp = input._flatpickr;
+            // Підмінюємо altFormat-функцію
+            fp.config.altFormat = 'j F Y'; // fallback
+            const originalFormatDate = fp.formatDate;
+            // Кастомний formatter: для altInput повертаємо "Сьогодні, 11 трав"
+            const customFormat = (date, format) => {
+                if (format === 'j F Y') return relativeLabel(date);
+                return originalFormatDate(date, format);
+            };
+            fp.formatDate = customFormat;
+            // Оновлюємо altInput одразу
+            if (fp.selectedDates[0]) {
+                fp.altInput.value = relativeLabel(fp.selectedDates[0]);
+            }
+        }
+        tryWire();
+
+        // Стрілки навігації
+        function shiftDate(delta) {
+            const fp = input._flatpickr;
+            if (!fp || !fp.selectedDates[0]) return;
+            const d = new Date(fp.selectedDates[0]);
+            d.setDate(d.getDate() + delta);
+            // Не дозволяємо обрати дату у минулому
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (d < today) return;
+            fp.setDate(d, true);
+        }
+        document.querySelector('.date-prev')?.addEventListener('click', () => shiftDate(-1));
+        document.querySelector('.date-next')?.addEventListener('click', () => shiftDate(1));
+    })();
+
+    // ----- Анімовані лічильники у секції стат -----
+    function animateStat(el) {
+        const target = parseFloat(el.dataset.stat || '0');
+        const duration = 1400;
+        const start = performance.now();
+        function tick(now) {
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const v = Math.round(target * eased);
+            el.textContent = v.toLocaleString('uk-UA') + (v >= target && target >= 1000 ? '+' : '');
+            if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    // ----- Reveal-анімація при скролі -----
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                if (entry.target.querySelectorAll('[data-stat]').length) {
+                    entry.target.querySelectorAll('[data-stat]').forEach(animateStat);
+                }
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
 {% endblock %}

@@ -1,8 +1,28 @@
+"""
+адмінка модуля orders: Order (з Ticket inline), Ticket, PromoCode.
+list_display, фільтри, пошук - підлаштовані під типові задачі диспетчера.
+"""
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Order, Ticket
+from .models import Order, PromoCode, Ticket
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = (
+        'code',
+        'discount_percent',
+        'valid_from',
+        'valid_until',
+        'usage_limit',
+        'times_used',
+        'is_active',
+    )
+    list_filter = ('is_active',)
+    search_fields = ('code', 'description')
+    readonly_fields = ('times_used', 'created_at')
 
 
 class TicketInline(admin.TabularInline):
@@ -50,8 +70,8 @@ class OrderAdmin(admin.ModelAdmin):
         'contact_email',
         'customer__name',
     )
-    autocomplete_fields = ('trip', 'customer', 'created_by')
-    readonly_fields = ('order_number', 'created_at', 'updated_at')
+    autocomplete_fields = ('trip', 'customer', 'created_by', 'promo_code')
+    readonly_fields = ('order_number', 'discount_amount', 'created_at', 'updated_at')
     date_hierarchy = 'created_at'
     inlines = [TicketInline]
     actions = ['recalc_totals']
@@ -68,7 +88,13 @@ class OrderAdmin(admin.ModelAdmin):
             ),
         }),
         ('Оплата', {
-            'fields': (('total_price', 'currency'), 'payment_method', 'paid_at'),
+            'fields': (
+                'promo_code',
+                'discount_amount',
+                ('total_price', 'currency'),
+                'payment_method',
+                'paid_at',
+            ),
         }),
         ('Інше', {
             'fields': ('created_by', 'notes', 'created_at', 'updated_at'),

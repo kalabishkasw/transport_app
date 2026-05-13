@@ -1,3 +1,4 @@
+"""appconfig модуля fleet (Vehicle і Driver)"""
 from django.apps import AppConfig
 
 

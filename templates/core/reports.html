@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}Звіти | TransAuto Travel{% endblock %}
+{% block page_title %}Звіти та аналітика{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .chart-mini { height: 240px; position: relative; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="filter-card mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small text-muted-2 mb-1">Період</label>
+            <select name="period" class="form-select" onchange="this.form.submit()">
+                {% for key, label in periods %}
+                    <option value="{{ key }}" {% if current_period == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label small text-muted-2 mb-1">Маршрут</label>
+            <select name="route" class="form-select" onchange="this.form.submit()">
+                <option value="">Усі маршрути</option>
+                {% for r in all_routes %}
+                    <option value="{{ r.id }}" {% if current_route == r.id|stringformat:"s" %}selected{% endif %}>
+                        {{ r.code }} · {{ r.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+                <i class="bi bi-funnel"></i> Застосувати
+            </button>
+            <a href="{% url 'core:reports' %}" class="btn btn-outline-secondary" title="Скинути">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-primary-soft"><i class="bi bi-receipt"></i></div>
+            <div>
+                <p class="metric-label">Замовлень за період</p>
+                <p class="metric-value">{{ recent_stats.orders_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-success-soft"><i class="bi bi-ticket-perforated"></i></div>
+            <div>
+                <p class="metric-label">Квитків за період</p>
+                <p class="metric-value">{{ recent_stats.tickets_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-warning-soft"><i class="bi bi-cash-coin"></i></div>
+            <div>
+                <p class="metric-label">Виручка за період</p>
+                <p class="metric-value">{{ recent_stats.revenue|floatformat:0 }} €</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="metric-card">
+            <div class="metric-icon bg-info-soft"><i class="bi bi-bar-chart"></i></div>
+            <div>
+                <p class="metric-label">Середній чек</p>
+                <p class="metric-value">{{ recent_stats.avg_check|floatformat:0 }} €</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="card chart-card">
+            <div class="card-title">
+                <i class="bi bi-calendar-week text-primary"></i> Замовлення за днями тижня
+            </div>
+            <div class="chart-mini"><canvas id="weekdayChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card chart-card">
+            <div class="card-title">
+                <i class="bi bi-pie-chart text-primary"></i> Замовлення за статусом
+            </div>
+            <div class="chart-mini"><canvas id="statusChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card table-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-trophy text-primary"></i> Топ маршрутів за виручкою</span>
+                <a href="{% url 'core:trips_export' %}" class="btn btn-sm btn-soft-primary">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Маршрут</th>
+                            <th class="text-end">Рейсів</th>
+                            <th class="text-end">Квитків</th>
+                            <th class="text-end">Виручка</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in top_routes %}
+                        <tr>
+                            <td><b>{{ r.code }}</b><div class="text-muted-2 small">{{ r.name }}</div></td>
+                            <td class="text-end">{{ r.trips_count }}</td>
+                            <td class="text-end">{{ r.tickets_count }}</td>
+                            <td class="text-end"><b>{{ r.revenue|default:0|floatformat:0 }} €</b></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">Немає даних за цей період</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card table-card">
+            <div class="card-header"><i class="bi bi-bus-front text-primary"></i> Топ ТЗ за виручкою</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>ТЗ</th>
+                            <th class="text-end">Рейсів</th>
+                            <th class="text-end">Виручка</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in top_vehicles %}
+                        <tr>
+                            <td>
+                                <b>{{ v.brand }} {{ v.model }}</b>
+                                <div class="text-muted-2 small">{{ v.registration_number }}</div>
+                            </td>
+                            <td class="text-end">{{ v.trips_count }}</td>
+                            <td class="text-end"><b>{{ v.revenue|default:0|floatformat:0 }} €</b></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-4">Немає даних</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card table-card">
+            <div class="card-header"><i class="bi bi-person-badge text-primary"></i> Топ водіїв за рейсами</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Водій</th>
+                            <th class="text-end">Категорії</th>
+                            <th class="text-end">Рейсів</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in top_drivers %}
+                        <tr>
+                            <td>
+                                <b>{{ d.user.last_name }} {{ d.user.first_name }}</b>
+                                <div class="text-muted-2 small">{{ d.license_number }}</div>
+                            </td>
+                            <td class="text-end small">{{ d.license_categories }}</td>
+                            <td class="text-end"><b>{{ d.trips_count }}</b></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-4">Немає даних</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card table-card">
+            <div class="card-header"><i class="bi bi-tag text-primary"></i> Промокоди</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Опис</th>
+                            <th class="text-end">Знижка</th>
+                            <th class="text-end">Використано</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in top_promos %}
+                        <tr>
+                            <td><b>{{ p.code }}</b></td>
+                            <td class="small">{{ p.description|default:"—" }}</td>
+                            <td class="text-end">{{ p.discount_percent }}%</td>
+                            <td class="text-end"><b>{{ p.times_used }}</b></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">Немає промокодів</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{{ chart_weekday|json_script:"chart-weekday" }}
+{{ chart_order_status|json_script:"chart-order-status" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+Chart.defaults.borderColor = isDark ? '#243049' : '#f1f5f9';
+
+const C = {
+    primary: isDark ? '#818cf8' : '#0369a1',
+    primarySoft: isDark ? 'rgba(129,140,248,0.20)' : 'rgba(3,105,161,0.12)',
+    grid: isDark ? '#243049' : '#f1f5f9',
+    palette: ['#0369a1', '#0891b2', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#7c3aed'],
+};
+
+// Weekday: bar chart з кількістю замовлень + виручкою як друга вісь
+const weekdayData = JSON.parse(document.getElementById('chart-weekday').textContent);
+new Chart(document.getElementById('weekdayChart'), {
+    type: 'bar',
+    data: {
+        labels: weekdayData.map(d => d.label),
+        datasets: [
+            {
+                label: 'Замовлень',
+                data: weekdayData.map(d => d.count),
+                backgroundColor: C.primary,
+                borderRadius: 6,
+                yAxisID: 'y',
+            },
+            {
+                type: 'line',
+                label: 'Виручка, €',
+                data: weekdayData.map(d => d.revenue),
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6,182,212,0.10)',
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1',
+                borderWidth: 2,
+                pointRadius: 4,
+            },
+        ],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, position: 'left', title: { display: true, text: 'Замовлень' } },
+            y1: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: '€' } },
+        },
+    },
+});
+
+// Order status: doughnut
+const statusData = JSON.parse(document.getElementById('chart-order-status').textContent);
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: statusData.map(d => d.label),
+        datasets: [{
+            data: statusData.map(d => d.value),
+            backgroundColor: C.palette,
+            borderWidth: 0,
+        }],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 10 } } },
+    },
+});
+</script>
+{% endblock %}

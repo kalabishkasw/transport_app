@@ -1,5 +1,52 @@
+"""
+моделі модуля orders: PromoCode, Order, Ticket.
+Order - бронювання на рейс з контактом замовника, статусом, сумою.
+Ticket - окремий квиток на одного пасажира зі своїм місцем і документом.
+PromoCode - знижка у відсотках з обмеженням за кількістю використань і датами.
+"""
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+
+class PromoCode(models.Model):
+    """Промокод зі знижкою у відсотках. Має термін дії та ліміт використань."""
+
+    code = models.CharField(max_length=20, unique=True, verbose_name='Код')
+    description = models.CharField(max_length=200, blank=True, verbose_name='Опис')
+    discount_percent = models.PositiveSmallIntegerField(
+        verbose_name='Знижка, %',
+        help_text='Відсоток знижки від суми замовлення',
+    )
+    valid_from = models.DateField(default=timezone.now, verbose_name='Діє з')
+    valid_until = models.DateField(verbose_name='Діє до')
+    usage_limit = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Ліміт використань',
+        help_text='0 = без обмежень',
+    )
+    times_used = models.PositiveIntegerField(default=0, verbose_name='Використано разів')
+    is_active = models.BooleanField(default=True, verbose_name='Активний')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Промокод'
+        verbose_name_plural = 'Промокоди'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.code} ({self.discount_percent}%)'
+
+    @property
+    def is_valid_now(self):
+        today = timezone.now().date()
+        if not self.is_active:
+            return False
+        if self.valid_from > today or self.valid_until < today:
+            return False
+        if self.usage_limit and self.times_used >= self.usage_limit:
+            return False
+        return True
 
 
 class Order(models.Model):
@@ -36,6 +83,7 @@ class Order(models.Model):
         on_delete=models.PROTECT,
         related_name='orders',
         verbose_name='Рейс',
+        db_index=True,
     )
     customer = models.ForeignKey(
         'customers.Customer',
@@ -65,6 +113,7 @@ class Order(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
         verbose_name='Статус',
+        db_index=True,
     )
 
     total_price = models.DecimalField(
@@ -83,6 +132,21 @@ class Order(models.Model):
     )
     paid_at = models.DateTimeField(blank=True, null=True, verbose_name='Оплачено')
 
+    promo_code = models.ForeignKey(
+        PromoCode,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders',
+        verbose_name='Промокод',
+    )
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Сума знижки',
+    )
+
     notes = models.TextField(blank=True, verbose_name='Примітки')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
@@ -91,6 +155,11 @@ class Order(models.Model):
         verbose_name = 'Замовлення'
         verbose_name_plural = 'Замовлення'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['trip', 'status']),
+        ]
 
     def __str__(self):
         return self.order_number or f'Замовлення #{self.pk}'
@@ -104,10 +173,15 @@ class Order(models.Model):
             super().save(update_fields=['order_number'])
 
     def recalculate_total(self):
-        """Перерахувати загальну суму як сума цін усіх квитків замовлення."""
-        total = sum((t.price for t in self.tickets.all()), start=0)
-        self.total_price = total
-        self.save(update_fields=['total_price', 'updated_at'])
+        """Перерахувати загальну суму як сума цін усіх квитків мінус знижка."""
+        from decimal import Decimal
+        subtotal = sum((t.price for t in self.tickets.all()), start=Decimal('0'))
+        discount = Decimal('0')
+        if self.promo_code and self.promo_code.is_valid_now:
+            discount = (subtotal * Decimal(self.promo_code.discount_percent) / Decimal(100)).quantize(Decimal('0.01'))
+        self.discount_amount = discount
+        self.total_price = subtotal - discount
+        self.save(update_fields=['total_price', 'discount_amount', 'updated_at'])
 
     @property
     def tickets_count(self):
@@ -196,6 +270,7 @@ class Ticket(models.Model):
         choices=Status.choices,
         default=Status.BOOKED,
         verbose_name='Статус',
+        db_index=True,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -204,6 +279,9 @@ class Ticket(models.Model):
         verbose_name = 'Квиток'
         verbose_name_plural = 'Квитки'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['order', 'status']),
+        ]
 
     def __str__(self):
         full_name = f'{self.passenger_last_name} {self.passenger_first_name}'.strip()

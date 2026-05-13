@@ -18,7 +18,7 @@
         </div>
     </div>
     <div class="d-flex gap-2">
-        <a href="/admin/orders/order/{{ order.id }}/change/" class="btn btn-outline-secondary">
+        <a href="{% url 'admin:orders_order_change' order.id %}" class="btn btn-outline-secondary">
             <i class="bi bi-pencil"></i> Редагувати
         </a>
     </div>

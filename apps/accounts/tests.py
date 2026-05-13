@@ -1,3 +1,2 @@
+"""Юніт-тести модуля accounts. Заглушка - тести буде додано окремою задачею."""
 from django.test import TestCase
-
-# Create your tests here.

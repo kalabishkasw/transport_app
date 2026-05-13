@@ -2,6 +2,63 @@
 
 {% block title %}Бронювання | {{ trip.route.name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+    .seatmap {
+        display: inline-block;
+        background: #f8fafc;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    .seatmap-driver {
+        text-align: center;
+        font-size: 11px; color: var(--muted);
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 12px;
+    }
+    .seatmap-grid { display: grid; gap: 6px; }
+    .seat {
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 8px;
+        font-size: 11px; font-weight: 600;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        color: #64748b;
+        cursor: pointer;
+        user-select: none;
+        transition: all .15s;
+    }
+    .seat:hover:not(.occupied) {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+        color: var(--primary);
+    }
+    .seat.selected {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+        transform: scale(1.05);
+    }
+    .seat.occupied {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #991b1b;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    .seat.aisle { visibility: hidden; }
+    .seat-legend {
+        display: flex; gap: 14px;
+        margin-top: 12px; font-size: 12px;
+    }
+    .seat-legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-box { width: 14px; height: 14px; border-radius: 4px; border: 1px solid; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="section-sm bg-light">
@@ -18,7 +75,25 @@
 
 <section class="section-sm">
 <div class="container">
-<form method="post" id="booking-form">
+
+{# Глобальний блок помилок: збирає усі помилки усіх форм в один alert #}
+{% if contact_form.errors or passenger_forms.0.errors %}
+<div class="alert alert-danger" role="alert" id="form-errors-alert">
+    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Будь ласка, заповніть усі обов'язкові поля</h6>
+    <ul class="mb-0 small">
+        {% for field, errors in contact_form.errors.items %}
+            {% for e in errors %}<li>{{ contact_form|default:"" }} <b>{{ field }}</b>: {{ e }}</li>{% endfor %}
+        {% endfor %}
+        {% for pf in passenger_forms %}
+            {% for field, errors in pf.errors.items %}
+                {% for e in errors %}<li>Пасажир №{{ forloop.parentloop.counter }} <b>{{ field }}</b>: {{ e }}</li>{% endfor %}
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form method="post" id="booking-form" novalidate>
     {% csrf_token %}
     <input type="hidden" name="count" id="count-input" value="{{ count }}">
 
@@ -39,6 +114,40 @@
                 </div>
                 <div class="text-muted small mt-2">Доступно {{ free }} вільних місць</div>
             </div>
+
+            {% if total_seats %}
+            <div class="card p-4 border-0 shadow-sm mb-3">
+                <h5 class="mb-3"><i class="bi bi-grid-3x3-gap text-primary"></i> Схема місць у автобусі</h5>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="seatmap">
+                        <div class="seatmap-driver">
+                            <i class="bi bi-steering-wheel"></i> Водій
+                        </div>
+                        <div id="seatmap-grid" class="seatmap-grid"
+                             data-total="{{ total_seats }}"
+                             data-count="{{ count }}"></div>
+                        {{ occupied_seats|json_script:"occupied-seats" }}
+                    </div>
+                    <div class="seat-legend">
+                        <div class="seat-legend-item">
+                            <div class="legend-box" style="background:#fff; border-color:#cbd5e1;"></div>
+                            Вільне
+                        </div>
+                        <div class="seat-legend-item">
+                            <div class="legend-box" style="background:var(--primary); border-color:var(--primary);"></div>
+                            Обране
+                        </div>
+                        <div class="seat-legend-item">
+                            <div class="legend-box" style="background:#fee2e2; border-color:#fecaca;"></div>
+                            Зайняте
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-2" id="seatmap-hint">
+                        Оберіть {{ count }} місце{{ count|pluralize:"я,ь" }} (по одному для кожного пасажира)
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <div class="card p-4 border-0 shadow-sm mb-3">
                 <h5 class="mb-3"><i class="bi bi-geo-alt text-primary"></i> Маршрут поїздки</h5>
@@ -68,54 +177,66 @@
                 <h5 class="mb-3"><i class="bi bi-person-circle text-primary"></i> Контактні дані замовника</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Прізвище</label>
+                        <label class="form-label small text-muted">Прізвище <span class="text-danger">*</span></label>
                         {{ contact_form.last_name }}
                         {% if contact_form.last_name.errors %}<div class="text-danger small mt-1">{{ contact_form.last_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Ім'я</label>
+                        <label class="form-label small text-muted">Ім'я <span class="text-danger">*</span></label>
                         {{ contact_form.first_name }}
+                        {% if contact_form.first_name.errors %}<div class="text-danger small mt-1">{{ contact_form.first_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Телефон</label>
+                        <label class="form-label small text-muted">Телефон <span class="text-danger">*</span></label>
                         {{ contact_form.phone }}
+                        {% if contact_form.phone.errors %}<div class="text-danger small mt-1">{{ contact_form.phone.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-muted">Email (для квитка)</label>
                         {{ contact_form.email }}
+                        {% if contact_form.email.errors %}<div class="text-danger small mt-1">{{ contact_form.email.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
             </div>
 
             {% for pf in passenger_forms %}
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3">
-                    <i class="bi bi-person text-primary"></i>
-                    Пасажир №{{ forloop.counter }}
+                <h5 class="mb-3 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person text-primary"></i> Пасажир №{{ forloop.counter }}</span>
+                    <span class="badge bg-light text-dark seat-badge"
+                          data-passenger="{{ forloop.counter0 }}"
+                          style="font-size:13px;">
+                        Місце: <span class="seat-value">—</span>
+                    </span>
                 </h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Прізвище</label>
+                        <label class="form-label small text-muted">Прізвище <span class="text-danger">*</span></label>
                         {{ pf.last_name }}
                         {% if pf.last_name.errors %}<div class="text-danger small mt-1">{{ pf.last_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Ім'я</label>
+                        <label class="form-label small text-muted">Ім'я <span class="text-danger">*</span></label>
                         {{ pf.first_name }}
+                        {% if pf.first_name.errors %}<div class="text-danger small mt-1">{{ pf.first_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small text-muted">Документ</label>
                         {{ pf.document_type }}
+                        {% if pf.document_type.errors %}<div class="text-danger small mt-1">{{ pf.document_type.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small text-muted">Номер документа</label>
+                        <label class="form-label small text-muted">Номер документа <span class="text-danger">*</span></label>
                         {{ pf.document_number }}
+                        {% if pf.document_number.errors %}<div class="text-danger small mt-1">{{ pf.document_number.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small text-muted">Тип квитка</label>
                         {{ pf.price_type }}
+                        {% if pf.price_type.errors %}<div class="text-danger small mt-1">{{ pf.price_type.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
+                <input type="hidden" name="p{{ forloop.counter0 }}-seat_number" value="">
             </div>
             {% endfor %}
 
@@ -140,6 +261,28 @@
                     <span class="text-muted">Кількість</span>
                     <span id="summary-count">{{ count }}</span>
                 </div>
+
+                <div class="mt-3">
+                    <label class="form-label small text-muted">Промокод (за наявності)</label>
+                    <input type="text" name="promo_code" class="form-control"
+                           placeholder="SUMMER15"
+                           style="text-transform: uppercase;">
+                </div>
+
+                {% if user.is_authenticated and user.loyalty_points > 0 %}
+                <div class="mt-3 p-2 rounded" style="background: var(--primary-soft);">
+                    <label class="form-label small mb-1" style="color: var(--primary); font-weight:600;">
+                        <i class="bi bi-stars"></i> Бонусні бали
+                    </label>
+                    <div class="small text-muted mb-2">
+                        Доступно: <b>{{ user.loyalty_points }}</b> балів. 1 бал = 1 EUR знижки (макс. 50% суми).
+                    </div>
+                    <input type="number" name="use_points" min="0" max="{{ user.loyalty_points }}"
+                           value="0" class="form-control form-control-sm"
+                           placeholder="Скільки балів використати">
+                </div>
+                {% endif %}
+
                 <hr>
                 <div class="d-flex justify-content-between align-items-baseline mb-3">
                     <span>Разом</span>
@@ -166,12 +309,176 @@
 
 {% block extra_scripts %}
 <script>
+    // Якщо сервер повернув помилки валідації, скролимо до них
+    document.addEventListener('DOMContentLoaded', function() {
+        const errAlert = document.getElementById('form-errors-alert');
+        if (errAlert) {
+            errAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    // Клієнт-сайд валідація: попереджаємо до сабміту
+    document.getElementById('booking-form').addEventListener('submit', function(e) {
+        const required = [
+            { sel: 'select[name="boarding_stop"]', label: 'Місце посадки' },
+            { sel: 'select[name="alighting_stop"]', label: 'Місце висадки' },
+            { sel: 'input[name="last_name"]', label: 'Прізвище контакту' },
+            { sel: 'input[name="first_name"]', label: 'Ім\'я контакту' },
+            { sel: 'input[name="phone"]', label: 'Телефон контакту' },
+        ];
+        // Поля пасажирів
+        document.querySelectorAll('[id^="id_p"][id$="-last_name"]').forEach((inp, i) => {
+            required.push({ sel: '#' + inp.id, label: 'Прізвище пасажира #' + (i + 1) });
+        });
+        document.querySelectorAll('[id^="id_p"][id$="-first_name"]').forEach((inp, i) => {
+            required.push({ sel: '#' + inp.id, label: 'Ім\'я пасажира #' + (i + 1) });
+        });
+        document.querySelectorAll('[id^="id_p"][id$="-document_number"]').forEach((inp, i) => {
+            required.push({ sel: '#' + inp.id, label: 'Номер документа пасажира #' + (i + 1) });
+        });
+
+        const missing = [];
+        let firstInvalidEl = null;
+        required.forEach(item => {
+            const el = document.querySelector(item.sel);
+            if (el && !el.value.trim()) {
+                missing.push(item.label);
+                el.style.borderColor = '#ef4444';
+                if (!firstInvalidEl) firstInvalidEl = el;
+            } else if (el) {
+                el.style.borderColor = '';
+            }
+        });
+
+        // Перевірка посадки/висадки: висадка має бути не такою самою і не раніше посадки
+        const boardSel = document.querySelector('select[name="boarding_stop"]');
+        const alightSel = document.querySelector('select[name="alighting_stop"]');
+        if (boardSel && alightSel && boardSel.value && alightSel.value && boardSel.value === alightSel.value) {
+            missing.push('Пункт посадки і висадки не можуть бути однаковими');
+            alightSel.style.borderColor = '#ef4444';
+            if (!firstInvalidEl) firstInvalidEl = alightSel;
+        }
+
+        if (missing.length) {
+            e.preventDefault();
+            const list = missing.map(m => '<li>' + m + '</li>').join('');
+            let alert = document.getElementById('client-error-alert');
+            if (!alert) {
+                alert = document.createElement('div');
+                alert.id = 'client-error-alert';
+                alert.className = 'alert alert-danger mt-3';
+                document.querySelector('section.section-sm > .container').prepend(alert);
+            }
+            alert.innerHTML = '<h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Не заповнені поля:</h6><ul class="mb-0 small">' + list + '</ul>';
+            (firstInvalidEl || alert).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
     function changeCount(n) {
-        // Перезавантаження сторінки з новою кількістю пасажирів,
-        // щоб згенерувати потрібну кількість форм
         const url = new URL(window.location.href);
         url.searchParams.set('count', n);
         window.location.href = url.toString();
     }
+
+    // ----- Інтерактивна схема місць -----
+    (function() {
+        const grid = document.getElementById('seatmap-grid');
+        if (!grid) return;
+        const total = parseInt(grid.dataset.total, 10);
+        const requiredCount = parseInt(grid.dataset.count, 10);
+        let occupied = [];
+        try {
+            const occEl = document.getElementById('occupied-seats');
+            if (occEl) occupied = JSON.parse(occEl.textContent || '[]');
+        } catch (e) {}
+
+        // Розкладка: 4 крісла в ряд (2 + прохід + 2). Останній ряд може мати 5.
+        const cols = 5; // 2 ліворуч, прохід, 2 праворуч (5 колонок з прохідом)
+        const seatsPerRow = 4;
+        const rows = Math.ceil(total / seatsPerRow);
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+        let seatNum = 1;
+        const cells = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                if (c === 2) {
+                    // прохід
+                    cell.className = 'seat aisle';
+                    cell.textContent = '';
+                } else if (seatNum > total) {
+                    cell.className = 'seat aisle';
+                } else {
+                    const num = String(seatNum);
+                    cell.className = 'seat';
+                    cell.dataset.seat = num;
+                    cell.textContent = num;
+                    if (occupied.includes(num)) {
+                        cell.classList.add('occupied');
+                    }
+                    seatNum++;
+                }
+                grid.appendChild(cell);
+                cells.push(cell);
+            }
+        }
+
+        const selected = [];
+        const seatInputs = document.querySelectorAll('input[name$="-seat_number"]');
+        const hint = document.getElementById('seatmap-hint');
+
+        function updateInputs() {
+            seatInputs.forEach((inp, i) => {
+                inp.value = selected[i] || '';
+            });
+            // Бейджі у картках пасажирів
+            document.querySelectorAll('.seat-badge').forEach((badge, i) => {
+                const valEl = badge.querySelector('.seat-value');
+                if (selected[i]) {
+                    valEl.textContent = selected[i];
+                    badge.classList.remove('bg-light', 'text-dark');
+                    badge.classList.add('bg-primary', 'text-white');
+                } else {
+                    valEl.textContent = '—';
+                    badge.classList.add('bg-light', 'text-dark');
+                    badge.classList.remove('bg-primary', 'text-white');
+                }
+            });
+            const remaining = requiredCount - selected.length;
+            if (hint) {
+                if (remaining > 0) {
+                    hint.textContent = `Обрано ${selected.length} з ${requiredCount}. Залишилось обрати ще ${remaining}.`;
+                    hint.style.color = 'var(--muted)';
+                } else {
+                    hint.textContent = `✓ Усі ${requiredCount} місць обрано`;
+                    hint.style.color = 'var(--success)';
+                }
+            }
+        }
+
+        cells.forEach(cell => {
+            if (!cell.dataset.seat || cell.classList.contains('occupied')) return;
+            cell.addEventListener('click', () => {
+                const num = cell.dataset.seat;
+                const idx = selected.indexOf(num);
+                if (idx >= 0) {
+                    selected.splice(idx, 1);
+                    cell.classList.remove('selected');
+                } else if (selected.length < requiredCount) {
+                    selected.push(num);
+                    cell.classList.add('selected');
+                } else {
+                    // Замінити перше обране
+                    const first = selected.shift();
+                    document.querySelector(`.seat[data-seat="${first}"]`)?.classList.remove('selected');
+                    selected.push(num);
+                    cell.classList.add('selected');
+                }
+                updateInputs();
+            });
+        });
+        updateInputs();
+    })();
 </script>
 {% endblock %}

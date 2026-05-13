@@ -8,8 +8,8 @@
     <div class="auth-card">
         <div class="text-center mb-4">
             <i class="bi bi-bus-front-fill" style="font-size:36px; color:var(--primary);"></i>
-            <h3 class="mt-2 mb-1">Вхід у кабінет</h3>
-            <p class="text-muted small mb-0">Введіть ваш email і пароль</p>
+            <h3 class="mt-2 mb-1">{{ T.login_title }}</h3>
+            <p class="text-muted small mb-0">{{ T.login_sub }}</p>
         </div>
 
         {% if error %}
@@ -20,23 +20,21 @@
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ next }}">
             <div class="mb-3">
-                <label class="form-label small text-muted">Email</label>
+                <label class="form-label small text-muted">{{ T.login_email }}</label>
                 <input type="text" name="username" class="form-control form-control-lg" placeholder="you@example.com" required>
             </div>
             <div class="mb-3">
-                <label class="form-label small text-muted d-flex justify-content-between">
-                    <span>Пароль</span>
-                </label>
+                <label class="form-label small text-muted">{{ T.login_password }}</label>
                 <input type="password" name="password" class="form-control form-control-lg" required>
             </div>
             <button type="submit" class="btn btn-primary btn-lg w-100">
-                <i class="bi bi-box-arrow-in-right"></i> Увійти
+                <i class="bi bi-box-arrow-in-right"></i> {{ T.login_submit }}
             </button>
         </form>
 
         <div class="text-center mt-4 small text-muted">
-            Ще не маєте акаунту?
-            <a href="{% url 'portal:register' %}" class="fw-semibold">Зареєструватись</a>
+            {{ T.login_no_account }}
+            <a href="{% url 'portal:register' %}" class="fw-semibold">{{ T.login_register_link }}</a>
         </div>
     </div>
 </div>

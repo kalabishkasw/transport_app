@@ -1,3 +1,4 @@
+"""appconfig клієнтського порталу (фронтенд бронювань)"""
 from django.apps import AppConfig
 
 

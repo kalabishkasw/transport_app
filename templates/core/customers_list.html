@@ -17,7 +17,7 @@
     <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
     <a href="{% url 'core:customers_list' %}" class="btn btn-outline-secondary">Скинути</a>
     <span class="ms-auto">
-        <a href="/admin/customers/customer/add/" class="btn btn-primary">
+        <a href="{% url 'admin:customers_customer_add' %}" class="btn btn-primary">
             <i class="bi bi-plus-lg"></i> Новий клієнт
         </a>
     </span>
@@ -43,7 +43,9 @@
                 {% for c in customers %}
                 <tr>
                     <td>
-                        <b>{{ c.name }}</b>
+                        <a href="{% url 'core:customer_detail' c.id %}" class="text-decoration-none">
+                            <b>{{ c.name }}</b>
+                        </a>
                         {% if c.tax_number %}
                             <div class="text-muted-2 small">ЄДРПОУ: {{ c.tax_number }}</div>
                         {% endif %}

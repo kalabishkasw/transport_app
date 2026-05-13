@@ -5,7 +5,16 @@
 
 {% block content %}
 
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <a href="?period=today" class="btn btn-sm {% if filters.period == 'today' %}btn-primary{% else %}btn-soft-primary{% endif %}">Сьогодні</a>
+    <a href="?period=week" class="btn btn-sm {% if filters.period == 'week' %}btn-primary{% else %}btn-soft-primary{% endif %}">Цей тиждень</a>
+    <a href="?period=month" class="btn btn-sm {% if filters.period == 'month' %}btn-primary{% else %}btn-soft-primary{% endif %}">Місяць</a>
+    <a href="?period=future" class="btn btn-sm {% if filters.period == 'future' %}btn-primary{% else %}btn-soft-primary{% endif %}">Майбутні</a>
+    <a href="?period=past" class="btn btn-sm {% if filters.period == 'past' %}btn-primary{% else %}btn-soft-primary{% endif %}">Минулі</a>
+</div>
+
 <form method="get" class="filter-bar">
+    <input type="hidden" name="period" value="{{ filters.period }}">
     <input type="search" name="q" value="{{ filters.q }}" class="form-control" style="max-width:280px;"
            placeholder="Пошук за маршрутом, номером авто...">
     <select name="status" class="form-select" style="max-width:200px;">
@@ -22,8 +31,14 @@
     </select>
     <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
     <a href="{% url 'core:trips_list' %}" class="btn btn-outline-secondary">Скинути</a>
-    <span class="ms-auto">
-        <a href="/admin/routes/trip/add/" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Новий рейс</a>
+    <span class="ms-auto d-flex gap-2">
+        <a href="{% url 'core:trips_calendar' %}" class="btn btn-soft-primary">
+            <i class="bi bi-calendar3"></i> Календар
+        </a>
+        <a href="{% url 'core:trips_export' %}?{{ request.GET.urlencode }}" class="btn btn-soft-primary">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a href="{% url 'admin:routes_trip_add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Новий рейс</a>
     </span>
 </form>
 

@@ -4,11 +4,33 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from apps.orders.models import Ticket
+from apps.reviews.models import Review
 
 
 User = get_user_model()
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ('rating', 'title', 'comment')
+        widgets = {
+            'rating': forms.RadioSelect(choices=[(i, f'{i}') for i in range(1, 6)]),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Коротко: що вам сподобалось чи ні',
+                'maxlength': 120,
+            }),
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Розкажіть детальніше про поїздку...',
+            }),
+        }
 
 
 class SearchForm(forms.Form):
@@ -45,7 +67,12 @@ class ClientRegisterForm(forms.Form):
     last_name = forms.CharField(label='Прізвище', max_length=64)
     email = forms.EmailField(label='Email')
     phone = forms.CharField(label='Телефон', max_length=20)
-    password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput, min_length=6)
+    password1 = forms.CharField(
+        label='Пароль',
+        widget=forms.PasswordInput,
+        min_length=8,
+        help_text='Мінімум 8 символів. Не можна використовувати лише цифри або поширені паролі.',
+    )
     password2 = forms.CharField(label='Повторіть пароль', widget=forms.PasswordInput)
 
     def clean_email(self):
@@ -53,6 +80,24 @@ class ClientRegisterForm(forms.Form):
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('Користувач з таким email вже зареєстрований.')
         return email
+
+    def clean_password1(self):
+        # Прокидаємо пароль через стандартні AUTH_PASSWORD_VALIDATORS:
+        # MinimumLength, CommonPassword, NumericPassword, UserAttributeSimilarity.
+        password = self.cleaned_data.get('password1')
+        if password:
+            # Створюємо тимчасовий User-обєкт для UserAttributeSimilarityValidator
+            tmp = User(
+                username=self.cleaned_data.get('email', ''),
+                email=self.cleaned_data.get('email', ''),
+                first_name=self.cleaned_data.get('first_name', ''),
+                last_name=self.cleaned_data.get('last_name', ''),
+            )
+            try:
+                validate_password(password, tmp)
+            except DjangoValidationError as e:
+                raise forms.ValidationError(list(e.messages))
+        return password
 
     def clean(self):
         cleaned = super().clean()

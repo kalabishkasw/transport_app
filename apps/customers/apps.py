@@ -1,3 +1,4 @@
+"""appconfig модуля customers (юр. особи, корпоративні клієнти)"""
 from django.apps import AppConfig
 
 

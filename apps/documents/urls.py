@@ -1,3 +1,4 @@
+"""url-маршрути pdf-документів: квиток, посадковий лист"""
 from django.urls import path
 
 from . import views

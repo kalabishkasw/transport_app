@@ -1,3 +1,6 @@
+"""
+apps portal не має власних моделей. це застосунок-фронтенд клієнтського
+сайту: пошук рейсів, бронювання, кабінет. дані беру з моделей
+інших застосунків (orders, routes, reviews).
+"""
 from django.db import models
-
-# Create your models here.

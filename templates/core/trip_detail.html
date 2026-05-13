@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load transport_extras %}
 
 {% block title %}Рейс {{ trip.route.code }} | {{ trip.departure_at|date:"d.m.Y" }}{% endblock %}
 {% block page_title %}Рейс {{ trip.route.code }}{% endblock %}
@@ -24,7 +25,7 @@
         <a href="{% url 'documents:passenger_list_pdf' trip.id %}" target="_blank" class="btn btn-primary">
             <i class="bi bi-file-pdf"></i> Посадковий лист
         </a>
-        <a href="/admin/routes/trip/{{ trip.id }}/change/" class="btn btn-outline-secondary">
+        <a href="{% url 'admin:routes_trip_change' trip.id %}" class="btn btn-outline-secondary">
             <i class="bi bi-pencil"></i>
         </a>
     </div>
@@ -122,10 +123,12 @@
                 </div>
                 <ol class="list-unstyled mb-0 small">
                     {% for s in stops %}
-                        <li class="mb-1">
+                        <li class="mb-1 d-flex align-items-center gap-2">
                             <span class="badge bg-light text-dark">{{ s.order }}</span>
-                            <b>{{ s.city }}</b>
-                            <span class="text-muted-2">+{{ s.departure_offset_minutes }} хв</span>
+                            <b class="flex-grow-1">{{ s.city }}</b>
+                            <span class="text-primary fw-semibold">
+                                {{ trip.departure_at|add_minutes:s.departure_offset_minutes|date:"H:i" }}
+                            </span>
                         </li>
                     {% endfor %}
                 </ol>

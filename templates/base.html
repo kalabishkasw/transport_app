@@ -31,6 +31,228 @@
             --sidebar-text: #cbd5e1;
             --sidebar-active-bg: #1e293b;
             --sidebar-active-text: #ffffff;
+            --table-stripe: #f8fafc;
+            --table-header: #f1f5f9;
+        }
+        [data-theme="dark"] {
+            --bg: #0b1220;
+            --surface: #131c2e;
+            --border: #243049;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --primary: #818cf8;
+            --primary-hover: #6366f1;
+            --primary-soft: #1e2750;
+            --sidebar-bg: #050912;
+            --sidebar-text: #94a3b8;
+            --sidebar-active-bg: #131c2e;
+            --sidebar-active-text: #ffffff;
+            --table-stripe: #1a2438;
+            --table-header: #1a2438;
+        }
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .metric-card,
+        [data-theme="dark"] .chart-card { background: var(--surface); border-color: var(--border); color: var(--text); }
+        [data-theme="dark"] .card-header { background: transparent; color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .table { color: var(--text); }
+        [data-theme="dark"] .table thead th { background: var(--table-header); color: var(--muted); border-color: var(--border); }
+        [data-theme="dark"] .table tbody tr:hover { background: var(--table-stripe); }
+        [data-theme="dark"] .table tbody td { color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .topbar { background: var(--surface); border-color: var(--border); }
+        [data-theme="dark"] .topbar .page-title { color: var(--text); }
+        [data-theme="dark"] .form-control, [data-theme="dark"] .form-select {
+            background: var(--surface); color: var(--text); border-color: var(--border);
+        }
+        [data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
+            background: var(--surface); color: var(--text); border-color: var(--primary);
+        }
+        [data-theme="dark"] .form-control::placeholder { color: #475569; }
+        [data-theme="dark"] .btn-light { background: var(--surface); color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .btn-light:hover { background: var(--table-stripe); color: var(--text); }
+        [data-theme="dark"] .btn-outline-secondary { color: var(--muted); border-color: var(--border); }
+        [data-theme="dark"] .btn-outline-secondary:hover { background: var(--table-stripe); color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .btn-outline-primary { color: #a5b4fc; border-color: #818cf8; }
+        [data-theme="dark"] .btn-outline-primary:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+        [data-theme="dark"] .dropdown-menu { background: var(--surface); border-color: var(--border); color: var(--text); }
+        [data-theme="dark"] .dropdown-menu a { color: var(--text); }
+        [data-theme="dark"] .dropdown-menu a:hover { background: var(--table-stripe); color: #fff; }
+        [data-theme="dark"] .dropdown-menu .border-bottom { border-color: var(--border) !important; }
+        [data-theme="dark"] .text-muted-2,
+        [data-theme="dark"] .text-muted,
+        [data-theme="dark"] .text-secondary { color: var(--muted) !important; }
+        [data-theme="dark"] .text-dark { color: var(--text) !important; }
+        [data-theme="dark"] .bg-light,
+        [data-theme="dark"] .bg-white { background: var(--surface) !important; color: var(--text) !important; }
+
+        /* Метрики: іконки з прозорими фонами для обох тем */
+        [data-theme="dark"] .metric-icon.bg-primary-soft { background: rgba(129,140,248,0.15); color: #a5b4fc; }
+        [data-theme="dark"] .metric-icon.bg-success-soft { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+        [data-theme="dark"] .metric-icon.bg-warning-soft { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        [data-theme="dark"] .metric-icon.bg-danger-soft { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        [data-theme="dark"] .metric-icon.bg-info-soft { background: rgba(14,165,233,0.15); color: #7dd3fc; }
+
+        /* Статусні бейджі - солідні темні фони з контрастним текстом */
+        [data-theme="dark"] .status-planned    { background: #1e293b !important; color: #cbd5e1 !important; }
+        [data-theme="dark"] .status-on_sale    { background: #1e3a8a !important; color: #bfdbfe !important; }
+        [data-theme="dark"] .status-pending    { background: #422006 !important; color: #fbbf24 !important; }
+        [data-theme="dark"] .status-confirmed  { background: #1e3a8a !important; color: #bfdbfe !important; }
+        [data-theme="dark"] .status-paid       { background: #14532d !important; color: #86efac !important; }
+        [data-theme="dark"] .status-in_progress{ background: #4c1d95 !important; color: #c4b5fd !important; }
+        [data-theme="dark"] .status-completed  { background: #14532d !important; color: #6ee7b7 !important; }
+        [data-theme="dark"] .status-cancelled  { background: #7f1d1d !important; color: #fca5a5 !important; }
+        [data-theme="dark"] .status-refunded   { background: #7c2d12 !important; color: #fdba74 !important; }
+        [data-theme="dark"] .status-booked     { background: #422006 !important; color: #fbbf24 !important; }
+        [data-theme="dark"] .status-used       { background: #1e293b !important; color: #cbd5e1 !important; }
+
+        /* Soft-кнопки */
+        [data-theme="dark"] .btn-soft-primary { background: rgba(129,140,248,0.15); color: #a5b4fc; }
+        [data-theme="dark"] .btn-soft-primary:hover { background: rgba(129,140,248,0.25); color: #c7d2fe; }
+
+        /* Pagination */
+        [data-theme="dark"] .page-link { background: var(--surface); color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .page-link:hover { background: var(--table-stripe); color: var(--text); }
+        [data-theme="dark"] .page-item.active .page-link { background: var(--primary); border-color: var(--primary); color: #fff; }
+        [data-theme="dark"] .page-item.disabled .page-link { background: var(--surface); color: var(--muted); }
+
+        /* Empty state */
+        [data-theme="dark"] .empty-state { color: var(--muted); }
+
+        /* Audit-журнал */
+        [data-theme="dark"] .audit-action.create { background: rgba(16,185,129,0.20); color: #6ee7b7; }
+        [data-theme="dark"] .audit-action.update { background: rgba(59,130,246,0.20); color: #93c5fd; }
+        [data-theme="dark"] .audit-action.delete { background: rgba(239,68,68,0.20); color: #fca5a5; }
+        [data-theme="dark"] .changes-key { color: #a5b4fc; }
+        [data-theme="dark"] .changes-from { color: #fca5a5; }
+        [data-theme="dark"] .changes-to { color: #6ee7b7; }
+        [data-theme="dark"] code { color: #c4b5fd; }
+
+        /* Календар (FullCalendar) */
+        [data-theme="dark"] .fc { color: var(--text); }
+        [data-theme="dark"] .fc .fc-toolbar-title { color: var(--text); }
+        [data-theme="dark"] .fc-theme-standard td,
+        [data-theme="dark"] .fc-theme-standard th { border-color: var(--border); }
+        [data-theme="dark"] .fc-theme-standard .fc-scrollgrid { border-color: var(--border); }
+        [data-theme="dark"] .fc-day-today { background: var(--primary-soft) !important; }
+        [data-theme="dark"] .fc-col-header-cell-cushion { color: var(--text); }
+        [data-theme="dark"] .fc-daygrid-day-number,
+        [data-theme="dark"] .fc-list-day-cushion { color: var(--text); }
+        [data-theme="dark"] .fc-list-day-cushion { background: var(--table-header); }
+        [data-theme="dark"] .fc-list-event:hover td { background: var(--table-stripe); }
+
+        /* Alerts */
+        [data-theme="dark"] .alert { background: var(--surface); color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .alert-info { background: rgba(14,165,233,0.10); color: #7dd3fc; border-color: rgba(14,165,233,0.30); }
+        [data-theme="dark"] .alert-success { background: rgba(16,185,129,0.10); color: #6ee7b7; border-color: rgba(16,185,129,0.30); }
+        [data-theme="dark"] .alert-warning { background: rgba(245,158,11,0.10); color: #fbbf24; border-color: rgba(245,158,11,0.30); }
+        [data-theme="dark"] .alert-danger { background: rgba(239,68,68,0.10); color: #fca5a5; border-color: rgba(239,68,68,0.30); }
+
+        /* Avatars */
+        [data-theme="dark"] .user-avatar { background: rgba(129,140,248,0.20); color: #a5b4fc; }
+        [data-theme="dark"] .badge.bg-light { background: var(--table-stripe) !important; color: var(--text) !important; }
+
+        /* Inline elements */
+        [data-theme="dark"] hr { border-color: var(--border); }
+        [data-theme="dark"] a { color: #a5b4fc; }
+        [data-theme="dark"] a:hover { color: #c7d2fe; }
+        [data-theme="dark"] .table a { color: #a5b4fc; }
+
+        /* Bootstrap text-color utility overrides */
+        [data-theme="dark"] .text-success { color: #6ee7b7 !important; }
+        [data-theme="dark"] .text-warning { color: #fbbf24 !important; }
+        [data-theme="dark"] .text-danger { color: #fca5a5 !important; }
+        [data-theme="dark"] .text-info { color: #7dd3fc !important; }
+        [data-theme="dark"] .text-primary { color: #a5b4fc !important; }
+        [data-theme="dark"] .text-success.bi,
+        [data-theme="dark"] i.text-success { color: #6ee7b7 !important; }
+        [data-theme="dark"] .text-muted-2 i { color: var(--muted) !important; }
+
+        /* Bootstrap border utility overrides */
+        [data-theme="dark"] .border,
+        [data-theme="dark"] .border-bottom,
+        [data-theme="dark"] .border-top,
+        [data-theme="dark"] .border-start,
+        [data-theme="dark"] .border-end { border-color: var(--border) !important; }
+
+        /* Notification dropdown: повний контроль над текстом і границями */
+        [data-theme="dark"] #notif-items a { color: var(--text) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] #notif-items a:hover { background: var(--table-stripe); }
+        [data-theme="dark"] #notif-items a div.text-muted { color: var(--muted) !important; }
+
+        /* Bell + theme-toggle кнопки на світлому фоні топбару */
+        [data-theme="dark"] #notif-btn,
+        [data-theme="dark"] #theme-toggle { background: var(--surface); color: var(--text); }
+        [data-theme="dark"] #notif-btn:hover,
+        [data-theme="dark"] #theme-toggle:hover { background: var(--table-stripe); color: var(--text); }
+
+        /* Шкідливий жовтий фокус Chrome для autocompleted полів */
+        [data-theme="dark"] input:-webkit-autofill {
+            -webkit-text-fill-color: var(--text);
+            -webkit-box-shadow: 0 0 0 30px var(--surface) inset;
+        }
+
+        /* Form-check (checkboxes, radio) у dark */
+        [data-theme="dark"] .form-check-input { background-color: var(--surface); border-color: var(--border); }
+        [data-theme="dark"] .form-check-input:checked { background-color: var(--primary); border-color: var(--primary); }
+
+        /* Toast / Bootstrap dropdown shadow адаптивна */
+        [data-theme="dark"] .shadow-sm,
+        [data-theme="dark"] .shadow { box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; }
+
+        /* Bootstrap badge.bg-light явно (вища специфічність ніж BS5 default) */
+        [data-theme="dark"] .badge.bg-light,
+        [data-theme="dark"] span.bg-light {
+            background-color: var(--table-stripe) !important;
+            background: var(--table-stripe) !important;
+            color: var(--text) !important;
+        }
+
+        /* Bootstrap table зебра-смуги, hover, striped — у темному непомітні */
+        [data-theme="dark"] .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text);
+            --bs-table-striped-bg: var(--table-stripe);
+            --bs-table-striped-color: var(--text);
+            --bs-table-hover-bg: var(--table-stripe);
+            --bs-table-hover-color: var(--text);
+            --bs-table-border-color: var(--border);
+        }
+
+        /* Modal body/header/footer */
+        [data-theme="dark"] .modal-content { background: var(--surface); color: var(--text); border-color: var(--border); }
+        [data-theme="dark"] .modal-header,
+        [data-theme="dark"] .modal-footer { border-color: var(--border); }
+        [data-theme="dark"] .btn-close { filter: invert(1) brightness(1.5); }
+
+        /* Bootstrap-fields placeholder text прозорий у темному */
+        [data-theme="dark"] ::placeholder { color: #475569 !important; opacity: 1 !important; }
+
+        /* PDF та інші посилання у таблицях диспетчера */
+        [data-theme="dark"] .table .btn-soft-primary { color: #a5b4fc; background: rgba(129,140,248,0.15); }
+
+        /* Заголовки в карточках (h6, h5) */
+        [data-theme="dark"] .card h1, [data-theme="dark"] .card h2,
+        [data-theme="dark"] .card h3, [data-theme="dark"] .card h4,
+        [data-theme="dark"] .card h5, [data-theme="dark"] .card h6 { color: var(--text); }
+
+        /* btn-primary у темному режимі - яскравий CTA з градієнтом indigo > violet */
+        [data-theme="dark"] .btn-primary {
+            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+            border-color: #818cf8 !important;
+            color: #fff !important;
+            box-shadow: 0 2px 10px rgba(129,140,248,0.35);
+        }
+        [data-theme="dark"] .btn-primary:hover,
+        [data-theme="dark"] .btn-primary:focus,
+        [data-theme="dark"] .btn-primary:active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            border-color: #6366f1 !important;
+            color: #fff !important;
+            box-shadow: 0 4px 14px rgba(129,140,248,0.45);
+        }
+        [data-theme="dark"] .btn-primary:disabled {
+            background: #4338ca !important;
+            border-color: #4338ca !important;
+            opacity: 0.5;
         }
 
         * { box-sizing: border-box; }
@@ -322,6 +544,33 @@
             <h1 class="page-title">{% block page_title %}Дашборд{% endblock %}</h1>
             <div class="user-block">
                 {% if user.is_authenticated %}
+                    <button id="theme-toggle" class="btn btn-sm btn-light me-2"
+                            style="border:1px solid var(--border);"
+                            title="Перемкнути тему">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button id="notif-btn" class="btn btn-sm btn-light position-relative me-2"
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                style="border:1px solid var(--border);">
+                            <i class="bi bi-bell"></i>
+                            <span id="notif-count"
+                                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                  style="display:none; font-size:10px;">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-0"
+                             style="width:340px; max-height:420px; overflow-y:auto;">
+                            <div class="px-3 py-2 border-bottom d-flex justify-content-between">
+                                <span class="fw-semibold">Сповіщення</span>
+                                <span id="notif-summary" class="text-muted small"></span>
+                            </div>
+                            <div id="notif-items">
+                                <div class="text-center text-muted py-4 small">
+                                    <i class="bi bi-bell-slash"></i> Немає нових сповіщень
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
                     <div class="d-none d-md-block">
                         <div style="font-weight:500; line-height:1.2;">{{ user.get_full_name|default:user.username }}</div>
@@ -344,6 +593,62 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Темна тема: збереження вибору у localStorage
+    (function() {
+        const saved = localStorage.getItem('dashboardTheme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        const btn = document.getElementById('theme-toggle');
+        if (btn) {
+            const updateIcon = () => {
+                const cur = document.documentElement.getAttribute('data-theme');
+                btn.innerHTML = cur === 'dark'
+                    ? '<i class="bi bi-sun"></i>'
+                    : '<i class="bi bi-moon-stars"></i>';
+            };
+            updateIcon();
+            btn.addEventListener('click', () => {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('dashboardTheme', next);
+                updateIcon();
+            });
+        }
+    })();
+</script>
+{% if user.is_authenticated %}
+<script>
+    // Опитування сповіщень кожні 30 секунд
+    async function loadNotifications() {
+        try {
+            const r = await fetch('{% url "core:notifications_data" %}');
+            if (!r.ok) return;
+            const data = await r.json();
+            const badge = document.getElementById('notif-count');
+            const summary = document.getElementById('notif-summary');
+            const items = document.getElementById('notif-items');
+            if (data.count > 0) {
+                badge.textContent = data.count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+            summary.textContent = data.count + ' нових';
+            if (data.items && data.items.length > 0) {
+                items.innerHTML = data.items.map(it => `
+                    <a href="${it.url}" class="d-block px-3 py-2 text-decoration-none text-dark border-bottom" style="font-size:13px;">
+                        <div class="fw-semibold">${it.title}</div>
+                        <div class="text-muted small">${it.subtitle}</div>
+                    </a>
+                `).join('');
+            }
+        } catch (e) {}
+    }
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+</script>
+{% endif %}
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

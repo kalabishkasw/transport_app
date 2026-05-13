@@ -1,3 +1,10 @@
+"""
+модель користувача системи з рольовою моделлю доступу.
+
+розширив AbstractUser додатковими полями (телефон, по батькові) і полем
+ролі: адміністратор, диспетчер, водій, бухгалтер, клієнт. Зберігає бали
+лояльності для клієнтів (1 EUR = 1 бал, різні рівні базовий/срібний/золотий/платиновий).
+"""
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -23,6 +30,12 @@ class User(AbstractUser):
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name='Телефон')
     patronymic = models.CharField(max_length=64, blank=True, verbose_name='По батькові')
+
+    loyalty_points = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Бонусних балів',
+        help_text='1 бал = 1 EUR знижки. Нараховуються після завершення поїздки.',
+    )
 
     class Meta:
         verbose_name = 'Користувач'
@@ -52,3 +65,23 @@ class User(AbstractUser):
     @property
     def is_client(self):
         return self.role == self.Role.CLIENT
+
+    @property
+    def loyalty_level(self):
+        """Рівень лояльності за кількістю балів."""
+        if self.loyalty_points >= 500:
+            return 'Платиновий'
+        if self.loyalty_points >= 250:
+            return 'Золотий'
+        if self.loyalty_points >= 100:
+            return 'Срібний'
+        return 'Базовий'
+
+    @property
+    def loyalty_level_color(self):
+        return {
+            'Платиновий': '#a5b4fc',
+            'Золотий': '#fbbf24',
+            'Срібний': '#cbd5e1',
+            'Базовий': '#94a3b8',
+        }[self.loyalty_level]

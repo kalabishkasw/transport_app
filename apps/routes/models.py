@@ -1,3 +1,9 @@
+"""
+моделі маршрутів і рейсів.
+Route - географічний маршрут (Ужгород-Прага) з міжнародними характеристиками.
+Stop - впорядкована зупинка на маршруті з координатами і offset-часом від старту.
+Trip - конкретний рейс на певну дату з призначеним авто і водієм.
+"""
 from django.db import models
 
 
@@ -133,7 +139,7 @@ class Trip(models.Model):
         related_name='trips',
         verbose_name='Маршрут',
     )
-    departure_at = models.DateTimeField(verbose_name='Час відправлення')
+    departure_at = models.DateTimeField(verbose_name='Час відправлення', db_index=True)
 
     vehicle = models.ForeignKey(
         'fleet.Vehicle',
@@ -167,6 +173,7 @@ class Trip(models.Model):
         choices=Status.choices,
         default=Status.PLANNED,
         verbose_name='Статус',
+        db_index=True,
     )
     base_price = models.DecimalField(
         max_digits=10,
@@ -188,9 +195,19 @@ class Trip(models.Model):
         verbose_name = 'Рейс'
         verbose_name_plural = 'Рейси'
         ordering = ['-departure_at']
+        indexes = [
+            models.Index(fields=['status', 'departure_at']),
+            models.Index(fields=['route', 'departure_at']),
+        ]
 
     def __str__(self):
         return f'{self.route.code} | {self.departure_at:%d.%m.%Y %H:%M}'
+
+    @property
+    def arrival_at(self):
+        """Розрахунковий час прибуття: відправлення + тривалість маршруту."""
+        from datetime import timedelta
+        return self.departure_at + timedelta(minutes=self.route.duration_minutes)
 
     @property
     def total_seats(self):

@@ -1,3 +1,4 @@
+"""AppConfig модуля accounts + кастомий User з ролями"""
 from django.apps import AppConfig
 
 

@@ -3,6 +3,15 @@
 {% block title %}Дашборд | TransAuto Travel{% endblock %}
 {% block page_title %}Дашборд{% endblock %}
 
+{% block extra_head %}
+<style>
+    .metric-value[data-counter] { transition: all .2s; }
+    .chart-card { padding: 18px; }
+    .chart-card .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .chart-wrapper { position: relative; height: 220px; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="row g-3 mb-4">
@@ -11,7 +20,7 @@
             <div class="metric-icon bg-primary-soft"><i class="bi bi-calendar-event"></i></div>
             <div>
                 <p class="metric-label">Рейси цього місяця</p>
-                <p class="metric-value">{{ metrics.trips_this_month }}</p>
+                <p class="metric-value" data-counter="{{ metrics.trips_this_month }}">0</p>
                 <div class="metric-sub"><i class="bi bi-clock"></i> Сьогодні: {{ metrics.trips_active_today }}</div>
             </div>
         </div>
@@ -21,7 +30,7 @@
             <div class="metric-icon bg-success-soft"><i class="bi bi-ticket-perforated"></i></div>
             <div>
                 <p class="metric-label">Квитки за місяць</p>
-                <p class="metric-value">{{ metrics.tickets_this_month }}</p>
+                <p class="metric-value" data-counter="{{ metrics.tickets_this_month }}">0</p>
                 <div class="metric-sub">Активні бронювання</div>
             </div>
         </div>
@@ -31,7 +40,9 @@
             <div class="metric-icon bg-warning-soft"><i class="bi bi-cash-coin"></i></div>
             <div>
                 <p class="metric-label">Виручка за місяць</p>
-                <p class="metric-value">{{ metrics.revenue_this_month|floatformat:0 }} €</p>
+                <p class="metric-value">
+                    <span data-counter="{{ metrics.revenue_this_month|floatformat:0 }}">0</span> €
+                </p>
                 <div class="metric-sub">Підтверджені платежі</div>
             </div>
         </div>
@@ -41,7 +52,7 @@
             <div class="metric-icon bg-info-soft"><i class="bi bi-building"></i></div>
             <div>
                 <p class="metric-label">Активні клієнти</p>
-                <p class="metric-value">{{ metrics.customers_count }}</p>
+                <p class="metric-value" data-counter="{{ metrics.customers_count }}">0</p>
                 <div class="metric-sub">Юридичні особи</div>
             </div>
         </div>
@@ -54,7 +65,7 @@
             <div class="metric-icon bg-primary-soft"><i class="bi bi-bus-front"></i></div>
             <div>
                 <p class="metric-label">Транспорт в роботі</p>
-                <p class="metric-value">{{ metrics.vehicles_active }}</p>
+                <p class="metric-value" data-counter="{{ metrics.vehicles_active }}">0</p>
             </div>
         </div>
     </div>
@@ -63,7 +74,7 @@
             <div class="metric-icon bg-success-soft"><i class="bi bi-person-badge"></i></div>
             <div>
                 <p class="metric-label">Доступні водії</p>
-                <p class="metric-value">{{ metrics.drivers_available }}</p>
+                <p class="metric-value" data-counter="{{ metrics.drivers_available }}">0</p>
             </div>
         </div>
     </div>
@@ -72,7 +83,7 @@
             <div class="metric-icon bg-info-soft"><i class="bi bi-signpost-split"></i></div>
             <div>
                 <p class="metric-label">Активні маршрути</p>
-                <p class="metric-value">{{ metrics.routes_active }}</p>
+                <p class="metric-value" data-counter="{{ metrics.routes_active }}">0</p>
             </div>
         </div>
     </div>
@@ -83,10 +94,76 @@
                 <p class="metric-label">Завантаженість</p>
                 <p class="metric-value">
                     {% if metrics.vehicles_active %}
-                        {% widthratio metrics.trips_active_today metrics.vehicles_active 100 %}%
+                        {% widthratio metrics.vehicles_in_use_today metrics.vehicles_active 100 %}%
                     {% else %}—{% endif %}
                 </p>
-                <div class="metric-sub">Авто в рейсах сьогодні</div>
+                <div class="metric-sub">{{ metrics.vehicles_in_use_today }} з {{ metrics.vehicles_active }} авто у рейсах</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-xl-8">
+        <div class="card chart-card">
+            <div class="card-title d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-graph-up text-primary"></i> Виручка: 30 днів факт + 60 днів прогноз</span>
+                <span class="small text-muted-2">
+                    <span style="display:inline-block; width:10px; height:3px; background:var(--primary); vertical-align:middle;"></span> середньодобова, 7-денне згладжування
+                </span>
+            </div>
+            <div class="chart-wrapper"><canvas id="revenueChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card chart-card h-100">
+            <div class="card-title">
+                <i class="bi bi-pie-chart text-primary"></i> Рейси за статусом
+            </div>
+            <div class="chart-wrapper"><canvas id="statusChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-title">
+                <i class="bi bi-trophy text-primary"></i> Топ маршрутів
+            </div>
+            <div class="chart-wrapper"><canvas id="routesChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card">
+            <div class="card-title">
+                <i class="bi bi-info-circle text-primary"></i> Швидкі дії
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-6">
+                    <a href="{% url 'admin:routes_trip_add' %}" class="btn btn-soft-primary w-100 py-3">
+                        <i class="bi bi-plus-lg d-block fs-3"></i>
+                        <span class="small">Створити рейс</span>
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="{% url 'admin:orders_order_add' %}" class="btn btn-soft-primary w-100 py-3">
+                        <i class="bi bi-receipt d-block fs-3"></i>
+                        <span class="small">Нове замовлення</span>
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="{% url 'admin:customers_customer_add' %}" class="btn btn-soft-primary w-100 py-3">
+                        <i class="bi bi-building-add d-block fs-3"></i>
+                        <span class="small">Додати клієнта</span>
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="{% url 'admin:fleet_vehicle_add' %}" class="btn btn-soft-primary w-100 py-3">
+                        <i class="bi bi-bus-front d-block fs-3"></i>
+                        <span class="small">Додати ТЗ</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -194,4 +271,234 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+{{ chart_revenue|json_script:"chart-revenue" }}
+{{ chart_status|json_script:"chart-status" }}
+{{ chart_top_routes|json_script:"chart-top-routes" }}
+<script>window.TODAY_INDEX = {{ chart_today_index }};</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ----- Анімовані лічильники метрик -----
+function animateCounter(el) {
+    const target = parseFloat(el.dataset.counter || '0');
+    const duration = 900;
+    const start = performance.now();
+    const isFloat = !Number.isInteger(target);
+    function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = target * eased;
+        el.textContent = isFloat ? v.toFixed(1) : Math.round(v).toLocaleString('uk-UA');
+        if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+document.querySelectorAll('[data-counter]').forEach(animateCounter);
+
+// ----- Спільні налаштування Chart.js (адаптуються до теми) -----
+const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+Chart.defaults.borderColor = isDark ? '#243049' : '#f1f5f9';
+
+const COLORS = {
+    primary: isDark ? '#818cf8' : '#4f46e5',
+    primarySoft: isDark ? 'rgba(129,140,248,0.20)' : 'rgba(79,70,229,0.12)',
+    success: isDark ? '#34d399' : '#10b981',
+    warning: isDark ? '#fbbf24' : '#f59e0b',
+    info: isDark ? '#38bdf8' : '#0ea5e9',
+    danger: isDark ? '#f87171' : '#ef4444',
+    muted: isDark ? '#64748b' : '#94a3b8',
+    grid: isDark ? '#243049' : '#f1f5f9',
+};
+
+// ----- Графік: виручка (одна плавна лінія факт + прогноз) -----
+const revenueData = JSON.parse(document.getElementById('chart-revenue').textContent);
+const todayIndex = window.TODAY_INDEX || 30;
+
+// Плагін, що малює вертикальну лінію "сьогодні" та підпис у вигляді бейджа.
+// Бейдж розміщуємо ВСЕРЕДИНІ області графіка, щоб не обрізався контейнером.
+const todayMarker = {
+    id: 'todayMarker',
+    afterDatasetsDraw: (chart) => {
+        const x = chart.scales.x.getPixelForValue(todayIndex);
+        const ya = chart.scales.y;
+        const ctx = chart.ctx;
+        const lineColor = isDark ? '#a5b4fc' : '#4f46e5';
+        const labelText = 'Сьогодні';
+
+        ctx.save();
+        // Вертикальна пунктирна лінія від верху до низу області графіка
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, ya.top);
+        ctx.lineTo(x, ya.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Підпис як суцільний бейдж - всередині графіка, у верхній частині
+        ctx.font = '700 12px Inter';
+        const textWidth = ctx.measureText(labelText).width;
+        const padX = 10;
+        const badgeW = textWidth + padX * 2;
+        const badgeH = 22;
+        const badgeY = ya.top + 6; // 6px відступ від верху графіка
+
+        // Якщо бейдж не вміщається праворуч від лінії - ставимо ліворуч
+        const fitsRight = x + badgeW + 4 <= ya.right;
+        const badgeX = fitsRight ? x + 6 : x - badgeW - 6;
+        const radius = 6;
+
+        // Тінь під бейдж для виділення
+        ctx.shadowColor = 'rgba(79, 70, 229, 0.35)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
+
+        ctx.fillStyle = lineColor;
+        ctx.beginPath();
+        ctx.moveTo(badgeX + radius, badgeY);
+        ctx.lineTo(badgeX + badgeW - radius, badgeY);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + radius);
+        ctx.lineTo(badgeX + badgeW, badgeY + badgeH - radius);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - radius, badgeY + badgeH);
+        ctx.lineTo(badgeX + radius, badgeY + badgeH);
+        ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - radius);
+        ctx.lineTo(badgeX, badgeY + radius);
+        ctx.quadraticCurveTo(badgeX, badgeY, badgeX + radius, badgeY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Скидаємо тінь перед текстом
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labelText, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1);
+
+        // Невелика кругла мітка на пунктирній лінії на рівні бейджа
+        ctx.fillStyle = lineColor;
+        ctx.beginPath();
+        ctx.arc(x, badgeY + badgeH / 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, badgeY + badgeH / 2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    },
+};
+
+new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+        labels: revenueData.map(d => d.label),
+        datasets: [
+            {
+                label: 'Виручка, €',
+                data: revenueData.map(d => d.value),
+                borderColor: COLORS.primary,
+                backgroundColor: COLORS.primarySoft,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                borderWidth: 2.5,
+                segment: {
+                    borderDash: (ctx) => ctx.p1DataIndex > todayIndex ? [6, 4] : undefined,
+                    borderColor: (ctx) => ctx.p1DataIndex > todayIndex ? COLORS.muted : COLORS.primary,
+                },
+            },
+        ],
+    },
+    plugins: [todayMarker],
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => {
+                        const isFuture = ctx.dataIndex > todayIndex;
+                        const prefix = isFuture ? 'Прогноз' : 'Факт';
+                        return `${prefix}: ${Math.round(ctx.parsed.y).toLocaleString('uk-UA')} €`;
+                    },
+                },
+            },
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+            y: { beginAtZero: true, grid: { color: COLORS.grid } }
+        }
+    }
+});
+
+// ----- Графік: рейси за статусом -----
+const statusData = JSON.parse(document.getElementById('chart-status').textContent);
+// Кольори прив'язані до КЛЮЧА статусу, а не до порядку у даних.
+// Це гарантує, що "Скасований" завжди буде червоним, "Завершений" зеленим тощо.
+const STATUS_COLOR_MAP = {
+    'planned':     '#94a3b8',  // сірий, ще тільки запланований
+    'on_sale':     '#3b82f6',  // синій, у продажу
+    'in_progress': '#f59e0b',  // жовтогарячий, зараз у дорозі
+    'completed':   '#10b981',  // зелений, успішно завершено
+    'cancelled':   '#ef4444',  // червоний, скасовано
+};
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: statusData.map(d => d.label),
+        datasets: [{
+            data: statusData.map(d => d.value),
+            backgroundColor: statusData.map(d => STATUS_COLOR_MAP[d.key] || COLORS.muted),
+            borderWidth: 0,
+        }],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 12, boxWidth: 10 } }
+        }
+    }
+});
+
+// ----- Графік: топ маршрутів -----
+const routesData = JSON.parse(document.getElementById('chart-top-routes').textContent);
+new Chart(document.getElementById('routesChart'), {
+    type: 'bar',
+    data: {
+        labels: routesData.map(d => d.label),
+        datasets: [{
+            label: 'Квитків',
+            data: routesData.map(d => d.value),
+            backgroundColor: COLORS.primary,
+            borderRadius: 6,
+            maxBarThickness: 32,
+        }],
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { beginAtZero: true, grid: { color: COLORS.grid } },
+            y: { grid: { display: false } }
+        }
+    }
+});
+
+// Перерендер графіків при перемиканні теми
+document.getElementById('theme-toggle')?.addEventListener('click', () => setTimeout(() => location.reload(), 50));
+</script>
 {% endblock %}

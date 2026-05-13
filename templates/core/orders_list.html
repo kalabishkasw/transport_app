@@ -16,10 +16,29 @@
     </select>
     <button class="btn btn-primary"><i class="bi bi-funnel"></i> Фільтр</button>
     <a href="{% url 'core:orders_list' %}" class="btn btn-outline-secondary">Скинути</a>
-    <span class="ms-auto">
-        <a href="/admin/orders/order/add/" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Нове замовлення</a>
+    <span class="ms-auto d-flex gap-2">
+        <a href="{% url 'core:orders_export' %}?{{ request.GET.urlencode }}" class="btn btn-soft-primary">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a href="{% url 'admin:orders_order_add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Нове замовлення</a>
     </span>
 </form>
+
+<form method="post" id="bulk-form">
+    {% csrf_token %}
+<div id="bulk-bar" class="card mb-2 d-none" style="border-left:3px solid var(--primary);">
+    <div class="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
+        <span><b id="bulk-count">0</b> обрано</span>
+        <select name="bulk_action" class="form-select form-select-sm" style="max-width:240px;">
+            <option value="">— Дія —</option>
+            <option value="confirm">Підтвердити</option>
+            <option value="mark_paid">Позначити як оплачені</option>
+            <option value="cancel">Скасувати</option>
+        </select>
+        <button class="btn btn-sm btn-primary" type="submit">Виконати</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">Скасувати вибір</button>
+    </div>
+</div>
 
 <div class="card table-card">
     {% if orders %}
@@ -27,6 +46,7 @@
         <table class="table mb-0">
             <thead>
                 <tr>
+                    <th style="width:36px;"><input type="checkbox" id="select-all" class="form-check-input"></th>
                     <th>№</th>
                     <th>Дата</th>
                     <th>Рейс</th>
@@ -41,6 +61,7 @@
             <tbody>
                 {% for o in orders %}
                 <tr>
+                    <td><input type="checkbox" name="selected" value="{{ o.id }}" class="form-check-input row-check"></td>
                     <td><b>{{ o.order_number }}</b></td>
                     <td>
                         <div>{{ o.created_at|date:"d.m.Y" }}</div>
@@ -77,7 +98,32 @@
     </div>
     {% endif %}
 </div>
+</form>
 
 {% include 'components/_pagination.html' %}
+
+<script>
+    const checks = document.querySelectorAll('.row-check');
+    const all = document.getElementById('select-all');
+    const bar = document.getElementById('bulk-bar');
+    const counter = document.getElementById('bulk-count');
+
+    function update() {
+        const n = document.querySelectorAll('.row-check:checked').length;
+        counter.textContent = n;
+        bar.classList.toggle('d-none', n === 0);
+        if (all) all.checked = (n === checks.length && checks.length > 0);
+    }
+    checks.forEach(c => c.addEventListener('change', update));
+    if (all) all.addEventListener('change', () => {
+        checks.forEach(c => c.checked = all.checked);
+        update();
+    });
+    function clearSelection() {
+        checks.forEach(c => c.checked = false);
+        if (all) all.checked = false;
+        update();
+    }
+</script>
 
 {% endblock %}

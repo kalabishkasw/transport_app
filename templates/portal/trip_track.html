@@ -1,0 +1,536 @@
+{% extends 'portal/base.html' %}
+{% load transport_extras %}
+
+{% block title %}Відстеження рейсу {{ trip.route.code }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        #trackMap { height: 540px; border-radius: 14px; }
+        .leaflet-div-icon, .route-stop-marker, .bus-marker {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .bus-icon {
+            font-size: 30px;
+            filter: drop-shadow(0 3px 6px rgba(7, 89, 133, 0.45));
+        }
+        .live-pulse {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulseGreen 1.6s infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes pulseGreen {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border-left: 4px solid var(--primary);
+        }
+        .progress-track {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0c4a6e, #0891b2);
+            transition: width 0.8s ease;
+        }
+        .stop-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 14px;
+            border-left: 3px solid #e2e8f0;
+            padding-left: 12px;
+            margin-left: 4px;
+            position: relative;
+        }
+        .stop-item::before {
+            content: '';
+            position: absolute;
+            left: -7px;
+            top: 14px;
+            width: 11px; height: 11px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            border: 2px solid white;
+        }
+        .stop-item.passed::before { background: #10b981; }
+        .stop-item.current::before {
+            background: #f59e0b;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+<section class="section-sm">
+    <div class="container">
+        <a href="{% url 'portal:trip_detail' trip.id %}" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left"></i> До деталей рейсу
+        </a>
+
+        <div class="d-flex justify-content-between align-items-center mt-2 mb-3 flex-wrap gap-2">
+            <div>
+                <h2 class="mb-1">Відстеження рейсу <span class="text-muted small">({{ trip.route.code }})</span></h2>
+                <div class="text-muted">
+                    <span class="live-pulse"></span>
+                    <span id="liveStatus">Зєднання з GPS-трекером...</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="form-check form-switch m-0" title="Прискорена симуляція руху для демонстрації">
+                    <input class="form-check-input" type="checkbox" id="demoModeToggle">
+                    <label class="form-check-label small" for="demoModeToggle">
+                        <i class="bi bi-play-circle"></i> Demo-режим
+                    </label>
+                </div>
+                <span class="pill" id="statusBadge"><i class="bi bi-broadcast"></i> Завантаження</span>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="text-muted small">Маршрут</div>
+                    <div class="fw-semibold">{{ trip.route.origin_city }} → {{ trip.route.destination_city }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="text-muted small">Транспорт</div>
+                    <div class="fw-semibold">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</div>
+                    <div class="small text-muted">{{ trip.vehicle.registration_number }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="text-muted small">Поточна швидкість</div>
+                    <div class="fw-semibold"><span id="speedValue">,</span> <span class="small">км/год</span></div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="text-muted small">До найближчої зупинки</div>
+                    <div class="fw-semibold"><span id="etaValue">,</span> <span class="small">хв</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-3 border-0 shadow-sm mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                <div>
+                    <div class="text-muted small">Прогрес поїздки</div>
+                    <div class="fw-semibold"><span id="progressValue">0</span>%</div>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">Найближча / наступна зупинка</div>
+                    <div class="fw-semibold"><span id="currentStop">,</span> → <span id="nextStop">,</span></div>
+                </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-9">
+                <div class="card p-2 border-0 shadow-sm">
+                    <div id="trackMap"></div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="card p-3 border-0 shadow-sm">
+                    <h6 class="text-muted text-uppercase small mb-3">Зупинки</h6>
+                    <div id="stopsList">
+                        {% for s in stops %}
+                        <div class="stop-item" data-order="{{ s.order }}">
+                            <div>
+                                <div class="fw-semibold">{{ s.city }}</div>
+                                <div class="small text-muted">
+                                    {{ trip.departure_at|add_minutes:s.departure_offset_minutes|date:"d.m H:i" }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info border-0 mt-3 small">
+            <i class="bi bi-info-circle"></i>
+            Дані оновлюються кожні 8 секунд. У демо-режимі позиція автобуса розраховується аналітично на основі часу від відправлення та координат зупинок.
+        </div>
+    </div>
+</section>
+
+<script>
+    window.STOPS_DATA = {{ stops_with_coords_json|safe }};
+    window.TRIP_ID = {{ trip.id }};
+    window.POSITION_URL = "{% url 'portal:trip_position_api' trip.id %}";
+</script>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+    const stops = window.STOPS_DATA;
+    console.log('[GPS] Stops loaded:', stops);
+    if (!stops || !stops.length) {
+        document.getElementById('liveStatus').textContent = 'У маршруту немає координат зупинок';
+        return;
+    }
+
+    // Інверсія для зручності
+    const lats = stops.map(s => s.lat);
+    const lngs = stops.map(s => s.lng);
+    const bounds = L.latLngBounds([
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)],
+    ]);
+
+    const map = L.map('trackMap', { scrollWheelZoom: false }).fitBounds(bounds, { padding: [40, 40] });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19,
+    }).addTo(map);
+
+    // Лінія маршруту через OSRM + збереження геометрії для snap-to-road
+    let routeCoords = null;
+    let cumulativeDist = null;
+    let totalDist = 0;
+
+    function haversine(p1, p2) {
+        const R = 6371;
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(p2[0] - p1[0]);
+        const dLng = toRad(p2[1] - p1[1]);
+        const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(p1[0])) * Math.cos(toRad(p2[0])) * Math.sin(dLng/2)**2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function pointAlongRoute(progress) {
+        if (!routeCoords || !cumulativeDist || routeCoords.length < 2) return null;
+        const target = progress * totalDist;
+        let lo = 0, hi = cumulativeDist.length - 1;
+        while (lo < hi) {
+            const mid = (lo + hi) >>> 1;
+            if (cumulativeDist[mid] < target) lo = mid + 1;
+            else hi = mid;
+        }
+        const i = Math.max(1, lo);
+        const segStart = cumulativeDist[i - 1];
+        const segEnd = cumulativeDist[i];
+        const segLen = Math.max(1e-9, segEnd - segStart);
+        const t = (target - segStart) / segLen;
+        const p1 = routeCoords[i - 1];
+        const p2 = routeCoords[i];
+        const lat = p1[0] + (p2[0] - p1[0]) * t;
+        const lng = p1[1] + (p2[1] - p1[1]) * t;
+        const toRad = d => d * Math.PI / 180;
+        const toDeg = r => r * 180 / Math.PI;
+        const y = Math.sin(toRad(p2[1] - p1[1])) * Math.cos(toRad(p2[0]));
+        const x = Math.cos(toRad(p1[0])) * Math.sin(toRad(p2[0])) -
+                  Math.sin(toRad(p1[0])) * Math.cos(toRad(p2[0])) * Math.cos(toRad(p2[1] - p1[1]));
+        const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+        return { latlng: [lat, lng], bearing };
+    }
+
+    // Індекси точок полілінії, що відповідають кожній зупинці. Заповнюються
+    // після завантаження OSRM. Дозволяють позиціонувати автобус ТОЧНО між
+    // потрібними зупинками, не покладаючись на загальний відсоток відстані.
+    let stopPolylineIndexes = null;
+
+    function findNearestPolylineIndex(line, stop) {
+        let bestIdx = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < line.length; i++) {
+            const d = haversine([stop.lat, stop.lng], line[i]);
+            if (d < bestDist) {
+                bestDist = d;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
+    }
+
+    function pointAlongSegment(stopIndex, segmentT) {
+        // Повертає [lat, lng] на полілінії всередині сегмента між
+        // зупинками stopIndex та stopIndex+1, на частці segmentT (0..1).
+        if (!routeCoords || !stopPolylineIndexes) return null;
+        if (stopIndex < 0 || stopIndex >= stopPolylineIndexes.length - 1) return null;
+        const startIdx = stopPolylineIndexes[stopIndex];
+        const endIdx = stopPolylineIndexes[stopIndex + 1];
+        if (endIdx <= startIdx) return routeCoords[startIdx] || null;
+
+        // Кумулятивна відстань всередині сегмента (від startIdx до endIdx).
+        const segDistAtStart = cumulativeDist[startIdx];
+        const segDistAtEnd = cumulativeDist[endIdx];
+        const targetDist = segDistAtStart + (segDistAtEnd - segDistAtStart) * segmentT;
+
+        // Бінарний пошук точки полілінії з потрібною кумулятивною відстанню.
+        let lo = startIdx, hi = endIdx;
+        while (lo < hi) {
+            const mid = (lo + hi) >>> 1;
+            if (cumulativeDist[mid] < targetDist) lo = mid + 1;
+            else hi = mid;
+        }
+        const i = Math.max(startIdx + 1, lo);
+        const segStart = cumulativeDist[i - 1];
+        const segEnd = cumulativeDist[i];
+        const segLen = Math.max(1e-9, segEnd - segStart);
+        const t = (targetDist - segStart) / segLen;
+        const p1 = routeCoords[i - 1];
+        const p2 = routeCoords[i];
+        return [
+            p1[0] + (p2[0] - p1[0]) * t,
+            p1[1] + (p2[1] - p1[1]) * t,
+        ];
+    }
+
+    const coords = stops.map(s => `${s.lng},${s.lat}`).join(';');
+    const osrmReady = fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?geometries=geojson&overview=full`)
+        .then(r => r.json())
+        .then(d => {
+            if (d.routes && d.routes[0]) {
+                const line = d.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                L.polyline(line, { color: '#0891b2', weight: 4, opacity: 0.7 }).addTo(map);
+                routeCoords = line;
+                cumulativeDist = [0];
+                for (let i = 1; i < line.length; i++) {
+                    cumulativeDist.push(cumulativeDist[i-1] + haversine(line[i-1], line[i]));
+                }
+                totalDist = cumulativeDist[cumulativeDist.length - 1];
+                // Знаходимо найближчий index на полілінії для кожної зупинки.
+                stopPolylineIndexes = stops.map(s => findNearestPolylineIndex(line, s));
+                console.log('[GPS] OSRM loaded,', line.length, 'points,', totalDist.toFixed(1), 'km, stop indices:', stopPolylineIndexes);
+            }
+        })
+        .catch(() => {
+            // Fallback: пряма лінія між точками. Кожна зупинка = власна точка.
+            const line = stops.map(s => [s.lat, s.lng]);
+            L.polyline(line, { color: '#0891b2', weight: 3, dashArray: '5,8' }).addTo(map);
+            routeCoords = line;
+            cumulativeDist = [0];
+            for (let i = 1; i < line.length; i++) {
+                cumulativeDist.push(cumulativeDist[i-1] + haversine(line[i-1], line[i]));
+            }
+            totalDist = cumulativeDist[cumulativeDist.length - 1];
+            stopPolylineIndexes = stops.map((_, i) => i);
+        });
+
+    // Маркери зупинок
+    stops.forEach((s, i) => {
+        const isStart = i === 0;
+        const isEnd = i === stops.length - 1;
+        const color = isStart ? '#10b981' : (isEnd ? '#dc2626' : '#0369a1');
+        const icon = L.divIcon({
+            className: 'route-stop-marker',
+            html: `<div style="background:${color}; color:white; width:26px; height:26px; border-radius:50%;
+                          display:flex; align-items:center; justify-content:center; font-weight:bold;
+                          border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);">${i + 1}</div>`,
+            iconSize: [26, 26], iconAnchor: [13, 13],
+        });
+        L.marker([s.lat, s.lng], { icon }).addTo(map).bindPopup(`<b>${s.city}</b>`);
+    });
+
+    // Професійна SVG-іконка автобуса. Завжди прямо до глядача (без обертання).
+    const busIconHtml = `
+        <div style="width:48px; height:48px;
+                    display:flex; align-items:center; justify-content:center;
+                    background:#fff; border-radius:50%;
+                    border:3px solid #0369a1;
+                    box-shadow:0 4px 14px rgba(7,89,133,0.5), 0 0 0 5px rgba(3,105,161,0.18);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#0369a1">
+                <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+            </svg>
+        </div>`;
+    const busIcon = L.divIcon({
+        className: 'bus-marker',
+        html: busIconHtml,
+        iconSize: [48, 48], iconAnchor: [24, 24],
+    });
+    let busMarker = null;
+
+    // ----- Плавна анімація автобуса між опитуваннями -----
+    // Замість стрибків від точки до точки інтерполюємо позицію кожен кадр.
+    let animState = {
+        from: null,        // [lat, lng] - звідки рухаємось
+        to: null,          // [lat, lng] - куди рухаємось
+        startTime: 0,      // timestamp коли почали анімацію
+        durationMs: 2000,  // за скільки міс. ввершити (= інтервал опитування)
+    };
+
+    // Easing-функція: повільний старт-середина-повільний кінець для природнього руху.
+    function easeInOutQuad(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function animateBus() {
+        if (!busMarker || !animState.to) {
+            requestAnimationFrame(animateBus);
+            return;
+        }
+        const elapsed = performance.now() - animState.startTime;
+        const t = Math.min(1, elapsed / animState.durationMs);
+        const eased = easeInOutQuad(t);
+
+        const lat = animState.from[0] + (animState.to[0] - animState.from[0]) * eased;
+        const lng = animState.from[1] + (animState.to[1] - animState.from[1]) * eased;
+        busMarker.setLatLng([lat, lng]);
+
+        requestAnimationFrame(animateBus);
+    }
+    requestAnimationFrame(animateBus);
+
+    // Викликається при отриманні нової позиції з сервера. Замість моментального
+    // переміщення маркера підставляє новий цільовий пункт для анімації.
+    function moveBusTo(newPos, durationMs) {
+        if (!busMarker) {
+            // Перший виклик: створюємо маркер одразу у позиції.
+            busMarker = L.marker(newPos, { icon: busIcon, zIndexOffset: 1000 }).addTo(map);
+            animState.from = newPos;
+            animState.to = newPos;
+            animState.startTime = performance.now();
+            animState.durationMs = durationMs;
+            return;
+        }
+        // Старт нової анімації: from = поточна реальна позиція маркера, to = newPos.
+        const current = busMarker.getLatLng();
+        animState.from = [current.lat, current.lng];
+        animState.to = newPos;
+        animState.startTime = performance.now();
+        animState.durationMs = durationMs;
+    }
+
+    function setStatus(text, badgeText, badgeClass) {
+        document.getElementById('liveStatus').textContent = text;
+        const badge = document.getElementById('statusBadge');
+        badge.innerHTML = `<i class="bi bi-broadcast"></i> ${badgeText}`;
+        badge.className = 'pill ' + (badgeClass || '');
+    }
+
+    function updateStopsList(currentIndex, finished) {
+        document.querySelectorAll('.stop-item').forEach((el, i) => {
+            el.classList.remove('current', 'passed');
+            if (finished || i < currentIndex) el.classList.add('passed');
+            else if (i === currentIndex) el.classList.add('current');
+        });
+    }
+
+    // Авто-увімкнення demo-режиму, якщо рейс ще не настав
+    const tripDeparture = new Date('{{ trip.departure_at|date:"c" }}');
+    let demoMode = new Date() < tripDeparture;
+    const toggle = document.getElementById('demoModeToggle');
+    toggle.checked = demoMode;
+    if (demoMode) {
+        console.log('[GPS] Auto-enabled demo mode (trip is in future)');
+    }
+    toggle.addEventListener('change', function() {
+        demoMode = this.checked;
+        console.log('[GPS] Demo mode:', demoMode);
+        fetchPosition();
+    });
+
+    function fetchPosition() {
+        const url = window.POSITION_URL + (demoMode ? '?demo=1' : '');
+        console.log('[GPS] Fetching:', url);
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                console.log('[GPS] Response:', data);
+                if (data.status === 'pending') {
+                    setStatus(data.message, 'Очікує відправлення', '');
+                    // Автоматична пропозиція demo-режиму
+                    if (!demoMode && !window._demoSuggested) {
+                        window._demoSuggested = true;
+                        const hint = document.createElement('div');
+                        hint.className = 'alert alert-warning mt-2 small';
+                        hint.innerHTML = '<i class="bi bi-lightbulb"></i> Цей рейс заплановано на майбутнє. Увімкніть <b>Demo-режим</b> вгорі, щоб побачити симуляцію руху автобуса.';
+                        document.querySelector('section.section-sm > .container').prepend(hint);
+                    }
+                    return;
+                }
+                if (data.status === 'unavailable' || data.status === 'cancelled') {
+                    setStatus(data.message, data.status === 'cancelled' ? 'Скасовано' : 'Недоступно', '');
+                    return;
+                }
+
+                document.getElementById('speedValue').textContent = data.speed_kmh.toFixed(0);
+                document.getElementById('etaValue').textContent = data.is_finished ? '0' : data.eta_minutes_to_next;
+                document.getElementById('progressValue').textContent = data.progress_percent.toFixed(0);
+                document.getElementById('progressFill').style.width = data.progress_percent + '%';
+                document.getElementById('currentStop').textContent = data.nearest_stop || ',';
+                document.getElementById('nextStop').textContent = data.next_stop || (data.is_finished ? 'прибув' : ',');
+
+                if (data.is_finished) {
+                    setStatus('Рейс завершено', 'Прибув', '');
+                } else {
+                    setStatus(`У дорозі, оновлено ${new Date().toLocaleTimeString()}`, 'У дорозі', '');
+                }
+
+                // Точне snap-to-road: позиціонуємо автобус ВСЕРЕДИНІ сегменту
+                // між зупинкою nearest_stop_index і наступною, з прогресом segment_t.
+                // Це гарантує, що візуально автобус знаходиться там само де його
+                // показують метрики "найближча/наступна зупинка".
+                let pos = [data.lat, data.lng];
+                if (routeCoords && data.nearest_stop_index != null && data.segment_t != null) {
+                    const snapped = pointAlongSegment(data.nearest_stop_index, data.segment_t);
+                    if (snapped) {
+                        pos = snapped;
+                    }
+                } else if (routeCoords && data.progress_percent != null) {
+                    // Fallback на старий метод якщо segment_t не прийшов.
+                    const snapped = pointAlongRoute(data.progress_percent / 100);
+                    if (snapped) {
+                        pos = snapped.latlng;
+                    }
+                }
+                // Плавно "доїхати" до нової позиції за час інтервалу опитування.
+                const fetchInterval = demoMode ? 2000 : 8000;
+                moveBusTo(pos, fetchInterval);
+
+                // Підсвічування зупинок
+                let nearestIdx = 0;
+                stops.forEach((s, i) => {
+                    if (s.city === data.nearest_stop) nearestIdx = i;
+                });
+                updateStopsList(nearestIdx, data.is_finished);
+            })
+            .catch(() => {
+                setStatus('Помилка зєднання, повтор через 8с...', 'Помилка', '');
+            });
+    }
+
+    // Чекаємо завантаження OSRM-маршруту, потім стартуємо.
+    // Якщо OSRM не вантажиться, fallback теж заповнить routeCoords прямою лінією.
+    let timer;
+    osrmReady.finally(() => {
+        fetchPosition();
+        timer = setInterval(fetchPosition, demoMode ? 2000 : 8000);
+    });
+    toggle.addEventListener('change', function() {
+        if (timer) clearInterval(timer);
+        const interval = this.checked ? 2000 : 8000;
+        timer = setInterval(fetchPosition, interval);
+    });
+})();
+</script>
+{% endblock %}

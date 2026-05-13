@@ -1,3 +1,11 @@
+"""
+моделі автопарку: Vehicle і Driver.
+
+Vehicle - тз (автобус, мікроавтобус, вантажівка) з характеристиками комфорту,
+документами і строками техогляду/страховки.
+Driver - профіль водія з посвідченням, категоріями, медоглядом і паспортом,
+привязаний до User.
+"""
 from django.conf import settings
 from django.db import models
 
@@ -103,7 +111,7 @@ class Vehicle(models.Model):
     )
 
     # ---- стан ----
-    is_active = models.BooleanField(default=True, verbose_name='В експлуатації')
+    is_active = models.BooleanField(default=True, verbose_name='В експлуатації', db_index=True)
     notes = models.TextField(blank=True, verbose_name='Примітки')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
@@ -158,7 +166,7 @@ class Driver(models.Model):
         verbose_name='Медогляд до',
     )
 
-    is_available = models.BooleanField(default=True, verbose_name='Доступний для рейсів')
+    is_available = models.BooleanField(default=True, verbose_name='Доступний для рейсів', db_index=True)
     notes = models.TextField(blank=True, verbose_name='Примітки')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
 

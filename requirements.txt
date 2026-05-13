@@ -1,0 +1,35 @@
+# ядро django
+Django==6.0.4
+asgiref==3.11.1
+sqlparse==0.5.5
+tzdata==2026.2
+typing_extensions==4.15.0
+
+# база даних
+psycopg==3.3.3
+psycopg-binary==3.3.3
+dj-database-url==2.3.0
+
+# конфігурація
+python-dotenv==1.2.2
+
+# REST API і UI-кіт
+djangorestframework==3.17.1
+django-bootstrap5==26.2
+
+# робота з файлами
+pillow==12.2.0
+openpyxl==3.1.5
+et_xmlfile==2.0.0
+
+# PDF + QR-коди
+reportlab==4.4.10
+qrcode==8.2
+
+# допоміжне
+charset-normalizer==3.4.7
+colorama==0.4.6
+
+# production-веб-сервер
+gunicorn==23.0.0
+whitenoise==6.8.2

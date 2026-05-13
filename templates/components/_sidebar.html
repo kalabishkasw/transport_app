@@ -1,7 +1,11 @@
 {% load static %}
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <i class="bi bi-bus-front-fill"></i>
+        {# filter: invert інвертує чорний бус у білий, mix-blend-mode прибирає білий фон на темному сайдбарі #}
+        <img src="{% static 'portal/img/logo.png' %}" alt="TransAuto"
+             style="height:60px; width:auto; filter: invert(1); mix-blend-mode: screen;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+        <i class="bi bi-bus-front-fill" style="display:none;"></i>
         <span>TransAuto Travel</span>
     </div>
 
@@ -15,6 +19,14 @@
     <a href="{% url 'core:trips_list' %}"
        class="nav-link {% if active_page == 'trips' %}active{% endif %}">
         <i class="bi bi-calendar-event"></i> Рейси
+    </a>
+    <a href="{% url 'core:trips_calendar' %}"
+       class="nav-link {% if active_page == 'calendar' %}active{% endif %}">
+        <i class="bi bi-calendar3"></i> Календар
+    </a>
+    <a href="{% url 'core:reports' %}"
+       class="nav-link {% if active_page == 'reports' %}active{% endif %}">
+        <i class="bi bi-bar-chart-line"></i> Звіти
     </a>
     <a href="{% url 'core:orders_list' %}"
        class="nav-link {% if active_page == 'orders' %}active{% endif %}">
@@ -40,6 +52,10 @@
     </a>
 
     <div class="sidebar-section">Система</div>
+    <a href="{% url 'core:audit_log' %}"
+       class="nav-link {% if active_page == 'audit' %}active{% endif %}">
+        <i class="bi bi-clipboard-data"></i> Аудит-журнал
+    </a>
     <a href="/" class="nav-link" target="_blank">
         <i class="bi bi-globe"></i> Сайт для клієнтів
     </a>

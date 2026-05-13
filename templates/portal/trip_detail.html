@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load transport_extras %}
 
 {% block title %}{{ trip.route.name }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
 
@@ -6,6 +7,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         #map { height: 360px; border-radius: 12px; }
+        /* Прибираємо стандартний білий квадрат навколо custom-маркерів */
+        .leaflet-div-icon, .route-stop-marker {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
     </style>
 {% endblock %}
 
@@ -14,7 +21,7 @@
 <section class="section-sm">
     <div class="container">
         <a href="{% url 'portal:search' %}" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left"></i> До списку рейсів
+            <i class="bi bi-arrow-left"></i> {{ T.trip_back_to_list }}
         </a>
 
         <div class="row g-4 mt-2">
@@ -26,27 +33,27 @@
                             <div class="text-muted">
                                 <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d F Y" }}
                                 &nbsp; · &nbsp;
-                                <i class="bi bi-clock"></i> Відправлення о {{ trip.departure_at|date:"H:i" }}
+                                <i class="bi bi-clock"></i> {{ trip.departure_at|date:"H:i" }} - {{ trip.arrival_at|date:"H:i" }}
                             </div>
                         </div>
-                        <span class="pill"><i class="bi bi-people"></i> {{ free }} вільних</span>
+                        <span class="pill"><i class="bi bi-people"></i> {{ free }} {{ T.trip_free_seats }}</span>
                     </div>
 
                     <div class="row g-3 my-2">
                         <div class="col-6 col-md-3">
-                            <div class="text-muted small">Час у дорозі</div>
-                            <div class="fw-semibold">{{ trip.route.duration_hours }} год</div>
+                            <div class="text-muted small">{{ T.trip_duration }}</div>
+                            <div class="fw-semibold">{{ trip.route.duration_hours }} {{ T.trip_hours_short }}</div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="text-muted small">Відстань</div>
-                            <div class="fw-semibold">{{ trip.route.distance_km }} км</div>
+                            <div class="text-muted small">{{ T.trip_distance }}</div>
+                            <div class="fw-semibold">{{ trip.route.distance_km }} {{ T.trip_km_short }}</div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="text-muted small">Зупинок у дорозі</div>
+                            <div class="text-muted small">{{ T.trip_stops_count }}</div>
                             <div class="fw-semibold">{{ stops|length }}</div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="text-muted small">Транспорт</div>
+                            <div class="text-muted small">{{ T.trip_transport }}</div>
                             <div class="fw-semibold">{{ trip.vehicle.brand }}</div>
                         </div>
                     </div>
@@ -57,7 +64,7 @@
                 </div>
 
                 <div class="card p-4 border-0 shadow-sm mt-3">
-                    <h5 class="mb-3"><i class="bi bi-signpost-split text-primary"></i> Зупинки на маршруті</h5>
+                    <h5 class="mb-3"><i class="bi bi-signpost-split text-primary"></i> {{ T.trip_stops_list }}</h5>
                     <ol class="list-unstyled mb-0">
                         {% for s in stops %}
                         <li class="d-flex align-items-start gap-3 py-2 border-bottom">
@@ -67,33 +74,69 @@
                                 <div class="fw-semibold">{{ s.city }} <span class="text-muted small">({{ s.country }})</span></div>
                                 {% if s.station_name %}<div class="small text-muted">{{ s.station_name }}</div>{% endif %}
                             </div>
-                            <div class="text-end small text-muted">
-                                +{{ s.departure_offset_minutes }} хв
+                            <div class="text-end small">
+                                <div class="fw-semibold text-primary">
+                                    {{ trip.departure_at|add_minutes:s.departure_offset_minutes|date:"H:i" }}
+                                </div>
+                                {% if s.arrival_offset_minutes != s.departure_offset_minutes %}
+                                <div class="text-muted" style="font-size:11px;">
+                                    {{ T.trip_arrival_short }} {{ trip.departure_at|add_minutes:s.arrival_offset_minutes|date:"H:i" }}
+                                </div>
+                                {% endif %}
                             </div>
                         </li>
                         {% endfor %}
                     </ol>
                 </div>
 
+                {% if rating_stats.count %}
                 <div class="card p-4 border-0 shadow-sm mt-3">
-                    <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> Транспорт та зручності</h5>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="font-size:42px; font-weight:800; color:#f59e0b; line-height:1;">
+                            {{ rating_stats.avg|floatformat:1 }}
+                        </div>
+                        <div>
+                            <div style="color:#f59e0b; font-size:18px; letter-spacing:2px;">
+                                {% for i in "12345" %}{% if forloop.counter <= rating_stats.avg %}★{% else %}☆{% endif %}{% endfor %}
+                            </div>
+                            <div class="text-muted small">{{ rating_stats.count }} {{ T.trip_reviews_word }}{{ rating_stats.count|pluralize }}</div>
+                        </div>
+                    </div>
+                    {% for r in reviews %}
+                    <div class="border-top pt-3 mt-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <div class="fw-semibold">
+                                {{ r.user.first_name|default:T.trip_default_client }} {{ r.user.last_name|default:''|slice:":1" }}.
+                            </div>
+                            <div style="color:#f59e0b;">{{ r.stars }}</div>
+                        </div>
+                        {% if r.title %}<div class="fw-semibold small mb-1">{{ r.title }}</div>{% endif %}
+                        <div class="small">{{ r.comment|linebreaksbr }}</div>
+                        <div class="small text-muted mt-1">{{ r.created_at|date:"d.m.Y" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="card p-4 border-0 shadow-sm mt-3">
+                    <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> {{ T.trip_fleet_section }}</h5>
                     <div class="row g-3">
                         <div class="col-md-5">
-                            <div class="text-muted small">Модель</div>
+                            <div class="text-muted small">{{ T.trip_model }}</div>
                             <div class="fw-semibold">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</div>
-                            <div class="text-muted small mt-2">Рік випуску</div>
+                            <div class="text-muted small mt-2">{{ T.trip_year }}</div>
                             <div class="fw-semibold">{{ trip.vehicle.year }}</div>
-                            <div class="text-muted small mt-2">Місць</div>
+                            <div class="text-muted small mt-2">{{ T.trip_seats_total }}</div>
                             <div class="fw-semibold">{{ trip.vehicle.seats_total|default:"—" }}</div>
                         </div>
                         <div class="col-md-7">
-                            <div class="text-muted small mb-2">Зручності у автобусі</div>
+                            <div class="text-muted small mb-2">{{ T.trip_amenities }}</div>
                             <div class="d-flex gap-2 flex-wrap">
-                                {% if trip.vehicle.has_wifi %}<span class="pill"><i class="bi bi-wifi"></i> Wi-Fi</span>{% endif %}
-                                {% if trip.vehicle.has_climate %}<span class="pill"><i class="bi bi-thermometer-half"></i> Клімат</span>{% endif %}
-                                {% if trip.vehicle.has_wc %}<span class="pill"><i class="bi bi-water"></i> Туалет</span>{% endif %}
-                                {% if trip.vehicle.has_tv %}<span class="pill"><i class="bi bi-tv"></i> Мультимедіа</span>{% endif %}
-                                {% if trip.vehicle.has_usb %}<span class="pill"><i class="bi bi-usb-symbol"></i> USB</span>{% endif %}
+                                {% if trip.vehicle.has_wifi %}<span class="pill"><i class="bi bi-wifi"></i> {{ T.trip_amenity_wifi }}</span>{% endif %}
+                                {% if trip.vehicle.has_climate %}<span class="pill"><i class="bi bi-thermometer-half"></i> {{ T.trip_amenity_climate }}</span>{% endif %}
+                                {% if trip.vehicle.has_wc %}<span class="pill"><i class="bi bi-water"></i> {{ T.trip_amenity_wc }}</span>{% endif %}
+                                {% if trip.vehicle.has_tv %}<span class="pill"><i class="bi bi-tv"></i> {{ T.trip_amenity_tv }}</span>{% endif %}
+                                {% if trip.vehicle.has_usb %}<span class="pill"><i class="bi bi-usb-symbol"></i> {{ T.trip_amenity_usb }}</span>{% endif %}
                                 {% if trip.vehicle.comfort_class %}<span class="pill">{{ trip.vehicle.get_comfort_class_display }}</span>{% endif %}
                             </div>
                         </div>
@@ -102,33 +145,94 @@
             </div>
 
             <div class="col-lg-4">
+                <div id="countdown-card" class="card p-3 border-0 shadow-sm mb-3"
+                     style="background: linear-gradient(135deg,#0369a1,#0891b2); color:#fff;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="font-size:11px; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">{{ T.trip_countdown_label }}</div>
+                            <div id="countdown" style="font-size:22px; font-weight:700; line-height:1.2;">—</div>
+                        </div>
+                        <i class="bi bi-clock" id="countdown-icon" style="font-size:28px; opacity:0.4;"></i>
+                    </div>
+                </div>
+
+                {# Картка GPS-трекінгу: показується завжди, виділяється коли рейс у дорозі #}
+                <a id="track-card" href="{% url 'portal:trip_track' trip.id %}"
+                   class="card p-3 border-0 shadow-sm mb-3 text-decoration-none"
+                   style="background: linear-gradient(135deg,#10b981,#059669); color:#fff;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="font-size:11px; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">
+                                <span class="live-pulse-mini"></span> {{ T.trip_gps_label }}
+                            </div>
+                            <div style="font-size:18px; font-weight:700; line-height:1.2;">
+                                {{ T.trip_gps_title }}
+                            </div>
+                            <div style="font-size:11px; opacity:0.85;">
+                                <span id="track-hint">{{ T.trip_gps_hint }}</span>
+                            </div>
+                        </div>
+                        <i class="bi bi-geo-alt-fill" style="font-size:30px; opacity:0.5;"></i>
+                    </div>
+                </a>
+                <style>
+                    .live-pulse-mini {
+                        display: inline-block;
+                        width: 7px; height: 7px;
+                        border-radius: 50%;
+                        background: #fff;
+                        box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+                        animation: pulseWhite 1.6s infinite;
+                        margin-right: 4px;
+                        vertical-align: middle;
+                    }
+                    @keyframes pulseWhite {
+                        0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+                        70% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+                        100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+                    }
+                </style>
+
+                {% if stops_with_coords %}
+                <div id="weather-card" class="card p-3 border-0 shadow-sm mb-3" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-muted">{{ T.trip_weather_dest }}</div>
+                            <div id="weather-temp" style="font-size:24px; font-weight:700;"></div>
+                            <div id="weather-desc" class="small text-muted"></div>
+                        </div>
+                        <div id="weather-icon" style="font-size:42px;"></div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
-                    <div class="text-muted small">Ціна за один квиток</div>
+                    <div class="text-muted small">{{ T.trip_price_per_ticket }}</div>
                     <div style="font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1;">
                         {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Відправлення</span>
+                        <span class="text-muted">{{ T.trip_departure_label }}</span>
                         <b>{{ trip.departure_at|date:"d.m.Y H:i" }}</b>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Тривалість</span>
-                        <b>{{ trip.route.duration_hours }} год</b>
+                        <span class="text-muted">{{ T.trip_duration_label }}</span>
+                        <b>{{ trip.route.duration_hours }} {{ T.trip_hours_short }}</b>
                     </div>
                     <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Вільних місць</span>
+                        <span class="text-muted">{{ T.trip_free_seats_label }}</span>
                         <b>{{ free }}</b>
                     </div>
                     {% if free > 0 %}
                         <a href="{% url 'portal:booking_form' trip.id %}" class="btn btn-primary btn-lg w-100">
-                            <i class="bi bi-cart-check"></i> Купити квиток
+                            <i class="bi bi-cart-check"></i> {{ T.trip_buy_ticket }}
                         </a>
                     {% else %}
-                        <button class="btn btn-secondary btn-lg w-100" disabled>Місць немає</button>
+                        <button class="btn btn-secondary btn-lg w-100" disabled>{{ T.trip_no_seats }}</button>
                     {% endif %}
                     <div class="text-center small text-muted mt-3">
-                        <i class="bi bi-shield-check"></i> Безпечне оплачення
+                        <i class="bi bi-shield-check"></i> {{ T.trip_safe_payment }}
                     </div>
                 </div>
             </div>
@@ -139,6 +243,99 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+    // Live countdown до відправлення + автопідсвітка GPS-трекінгу
+    (function() {
+        const target = new Date('{{ trip.departure_at|date:"c" }}');
+        const durationMin = {{ trip.route.duration_minutes|default:0 }};
+        const arrival = new Date(target.getTime() + durationMin * 60000);
+        const el = document.getElementById('countdown');
+        const countdownCard = document.getElementById('countdown-card');
+        const trackCard = document.getElementById('track-card');
+        const trackHint = document.getElementById('track-hint');
+        if (!el) return;
+        function tick() {
+            const now = new Date();
+            const diffStart = Math.floor((target - now) / 1000);
+            const diffEnd = Math.floor((arrival - now) / 1000);
+
+            if (diffStart > 0) {
+                // Рейс ще не почався
+                let diff = diffStart;
+                const d = Math.floor(diff / 86400); diff -= d * 86400;
+                const h = Math.floor(diff / 3600); diff -= h * 3600;
+                const m = Math.floor(diff / 60); const s = diff - m * 60;
+                const parts = [];
+                if (d > 0) parts.push(d + ' д');
+                parts.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'));
+                el.textContent = parts.join(' ');
+                if (trackHint) trackHint.textContent = '{{ T.trip_gps_hint }}';
+            } else if (diffEnd > 0) {
+                // У дорозі
+                const elapsed = -diffStart;
+                const total = durationMin * 60;
+                const progress = total > 0 ? Math.min(100, Math.floor((elapsed / total) * 100)) : 0;
+                el.innerHTML = `🚌 {{ T.trip_countdown_inroute }} &nbsp; <span style="font-size:14px; opacity:0.85;">(${progress}%)</span>`;
+                // Підсвічуємо картку трекінгу
+                if (trackCard) {
+                    trackCard.style.boxShadow = '0 8px 24px rgba(16,185,129,0.4)';
+                    trackCard.style.transform = 'scale(1.02)';
+                }
+                if (trackHint) trackHint.innerHTML = '{{ T.trip_gps_hint_live }}';
+            } else {
+                // Рейс завершено
+                el.textContent = '✓ {{ T.trip_countdown_done }}';
+                if (countdownCard) countdownCard.style.background = 'linear-gradient(135deg,#64748b,#475569)';
+                if (trackHint) trackHint.textContent = '{{ T.trip_gps_hint_past }}';
+            }
+        }
+        tick(); setInterval(tick, 1000);
+    })();
+
+    // Інтеграція погоди (Open-Meteo) для пункту призначення
+    {% if stops_with_coords %}
+    (function() {
+        const stops = JSON.parse(document.getElementById('stops-data').textContent);
+        if (!stops.length) return;
+        const dest = stops[stops.length - 1];
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${dest.lat}&longitude=${dest.lng}&current=temperature_2m,weather_code&timezone=auto`;
+        fetch(url).then(r => r.ok ? r.json() : null).then(data => {
+            if (!data || !data.current) return;
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+            const desc = weatherDesc(code);
+            const icon = weatherIcon(code);
+            document.getElementById('weather-temp').textContent = `${temp >= 0 ? '+' : ''}${temp}°C`;
+            document.getElementById('weather-desc').textContent = desc + ' · ' + dest.city;
+            document.getElementById('weather-icon').innerHTML = icon;
+            document.getElementById('weather-card').style.display = 'block';
+        }).catch(() => {});
+    })();
+
+    function weatherDesc(c) {
+        if (c === 0) return 'Ясно';
+        if (c <= 3) return 'Хмарно з проясненнями';
+        if (c <= 48) return 'Туман';
+        if (c <= 57) return 'Мряка';
+        if (c <= 67) return 'Дощ';
+        if (c <= 77) return 'Сніг';
+        if (c <= 82) return 'Зливи';
+        if (c <= 86) return 'Снігопад';
+        if (c <= 99) return 'Гроза';
+        return 'Невідомо';
+    }
+    function weatherIcon(c) {
+        if (c === 0) return '<i class="bi bi-sun-fill text-warning"></i>';
+        if (c <= 3) return '<i class="bi bi-cloud-sun-fill text-info"></i>';
+        if (c <= 48) return '<i class="bi bi-cloud-fog-fill text-muted"></i>';
+        if (c <= 67) return '<i class="bi bi-cloud-rain-fill text-info"></i>';
+        if (c <= 77) return '<i class="bi bi-cloud-snow-fill text-info"></i>';
+        if (c <= 82) return '<i class="bi bi-cloud-rain-heavy-fill text-info"></i>';
+        if (c <= 86) return '<i class="bi bi-cloud-snow-fill text-info"></i>';
+        return '<i class="bi bi-cloud-lightning-rain-fill text-warning"></i>';
+    }
+    {% endif %}
+</script>
 {% if stops_with_coords %}
 {{ stops_with_coords|json_script:"stops-data" }}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -157,18 +354,244 @@
             const isLast = i === stopsJson.length - 1;
             const color = isFirst ? '#16a34a' : (isLast ? '#dc2626' : '#4f46e5');
             const icon = L.divIcon({
+                className: 'route-stop-marker',
                 html: `<div style="background:${color}; color:#fff; border-radius:50%;
                        width:28px; height:28px; display:flex; align-items:center; justify-content:center;
                        font-weight:700; font-size:13px; border:2px solid #fff;
-                       box-shadow:0 2px 4px rgba(0,0,0,0.3);">${s.order}</div>`,
+                       box-shadow:0 2px 6px rgba(0,0,0,0.3);">${s.order}</div>`,
                 iconSize: [28, 28], iconAnchor: [14, 14]
             });
             const marker = L.marker([s.lat, s.lng], {icon}).addTo(map);
             marker.bindPopup(`<b>${s.city}</b> (${s.country})`);
             latlngs.push([s.lat, s.lng]);
         });
-        const line = L.polyline(latlngs, {color: '#4f46e5', weight: 4, opacity: 0.7, dashArray: '8,6'}).addTo(map);
-        map.fitBounds(line.getBounds(), {padding: [40, 40]});
+        const fallback = L.polyline(latlngs, {color: '#94a3b8', weight: 3, opacity: 0.5, dashArray: '8,6'}).addTo(map);
+        map.fitBounds(fallback.getBounds(), {padding: [40, 40]});
+
+        // Геометрія реального маршруту (буде заповнено OSRM)
+        // Формат: масив [lat, lng]; cumulativeDist[i] = пройдена відстань до i-ої точки.
+        let routeCoords = null;
+        let cumulativeDist = null;
+        let totalDist = 0;
+        let stopPolylineIndexes = null;
+        const stopsList = stopsJson;  // [{lat, lng, ...}]
+
+        function findNearestPolylineIndex(line, stop) {
+            let bestIdx = 0, bestDist = Infinity;
+            for (let i = 0; i < line.length; i++) {
+                const d = haversine([stop.lat, stop.lng], line[i]);
+                if (d < bestDist) { bestDist = d; bestIdx = i; }
+            }
+            return bestIdx;
+        }
+
+        function pointAlongSegment(stopIndex, segmentT) {
+            if (!routeCoords || !stopPolylineIndexes) return null;
+            if (stopIndex < 0 || stopIndex >= stopPolylineIndexes.length - 1) return null;
+            const startIdx = stopPolylineIndexes[stopIndex];
+            const endIdx = stopPolylineIndexes[stopIndex + 1];
+            if (endIdx <= startIdx) return routeCoords[startIdx] || null;
+            const segDistAtStart = cumulativeDist[startIdx];
+            const segDistAtEnd = cumulativeDist[endIdx];
+            const targetDist = segDistAtStart + (segDistAtEnd - segDistAtStart) * segmentT;
+            let lo = startIdx, hi = endIdx;
+            while (lo < hi) {
+                const mid = (lo + hi) >>> 1;
+                if (cumulativeDist[mid] < targetDist) lo = mid + 1;
+                else hi = mid;
+            }
+            const i = Math.max(startIdx + 1, lo);
+            const segStart = cumulativeDist[i - 1];
+            const segEnd = cumulativeDist[i];
+            const segLen = Math.max(1e-9, segEnd - segStart);
+            const t = (targetDist - segStart) / segLen;
+            const p1 = routeCoords[i - 1];
+            const p2 = routeCoords[i];
+            return [p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t];
+        }
+
+        function haversine(p1, p2) {
+            const R = 6371;
+            const toRad = d => d * Math.PI / 180;
+            const dLat = toRad(p2[0] - p1[0]);
+            const dLng = toRad(p2[1] - p1[1]);
+            const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(p1[0])) * Math.cos(toRad(p2[0])) * Math.sin(dLng/2)**2;
+            return 2 * R * Math.asin(Math.sqrt(a));
+        }
+
+        // Знаходить точку на полілінії яка лежить на progress (0..1) від загальної довжини.
+        // Повертає [lat, lng] та bearing у градусах для повороту іконки.
+        function pointAlongRoute(progress) {
+            if (!routeCoords || !cumulativeDist || routeCoords.length < 2) return null;
+            const target = progress * totalDist;
+            // Бінарний пошук відрізку
+            let lo = 0, hi = cumulativeDist.length - 1;
+            while (lo < hi) {
+                const mid = (lo + hi) >>> 1;
+                if (cumulativeDist[mid] < target) lo = mid + 1;
+                else hi = mid;
+            }
+            const i = Math.max(1, lo);
+            const segStart = cumulativeDist[i - 1];
+            const segEnd = cumulativeDist[i];
+            const segLen = Math.max(1e-9, segEnd - segStart);
+            const t = (target - segStart) / segLen;
+            const p1 = routeCoords[i - 1];
+            const p2 = routeCoords[i];
+            const lat = p1[0] + (p2[0] - p1[0]) * t;
+            const lng = p1[1] + (p2[1] - p1[1]) * t;
+            // Bearing для повороту іконки (градуси, 0 = північ)
+            const toRad = d => d * Math.PI / 180;
+            const toDeg = r => r * 180 / Math.PI;
+            const y = Math.sin(toRad(p2[1] - p1[1])) * Math.cos(toRad(p2[0]));
+            const x = Math.cos(toRad(p1[0])) * Math.sin(toRad(p2[0])) -
+                      Math.sin(toRad(p1[0])) * Math.cos(toRad(p2[0])) * Math.cos(toRad(p2[1] - p1[1]));
+            const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+            return { latlng: [lat, lng], bearing };
+        }
+
+        // Реальний маршрут по дорогах через OSRM
+        const coords = latlngs.map(p => p[1] + ',' + p[0]).join(';');
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+        const osrmPromise = fetch(osrmUrl)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data || !data.routes || !data.routes.length) return null;
+                const geo = data.routes[0].geometry;
+                const realLine = L.geoJSON(geo, {
+                    style: { color: '#4f46e5', weight: 5, opacity: 0.85 }
+                }).addTo(map);
+                fallback.remove();
+                map.fitBounds(realLine.getBounds(), {padding: [40, 40]});
+                // Зберігаємо коорди для snap-to-road
+                routeCoords = geo.coordinates.map(c => [c[1], c[0]]); // [lat, lng]
+                cumulativeDist = [0];
+                for (let i = 1; i < routeCoords.length; i++) {
+                    cumulativeDist.push(cumulativeDist[i-1] + haversine(routeCoords[i-1], routeCoords[i]));
+                }
+                totalDist = cumulativeDist[cumulativeDist.length - 1];
+                stopPolylineIndexes = stopsList.map(s => findNearestPolylineIndex(routeCoords, s));
+                console.log('[GPS] OSRM route loaded,', routeCoords.length, 'points,', totalDist.toFixed(1), 'km');
+                return true;
+            }).catch(() => null);
+
+        // Live GPS-маркер автобуса
+        const tripDeparture = new Date('{{ trip.departure_at|date:"c" }}');
+        const tripDuration = {{ trip.route.duration_minutes|default:0 }};
+        const tripArrival = new Date(tripDeparture.getTime() + tripDuration * 60000);
+        const positionUrl = "{% url 'portal:trip_position_api' trip.id %}";
+        const trackUrl = "{% url 'portal:trip_track' trip.id %}";
+
+        // Професійна SVG-іконка автобуса. Завжди прямо до глядача (без обертання).
+        const busIconHtml = `
+            <div style="width:44px; height:44px;
+                        display:flex; align-items:center; justify-content:center;
+                        background:#fff; border-radius:50%;
+                        border:3px solid #0369a1;
+                        box-shadow:0 4px 14px rgba(7,89,133,0.45), 0 0 0 4px rgba(3,105,161,0.15);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#0369a1">
+                    <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+                </svg>
+            </div>`;
+        const busIcon = L.divIcon({
+            className: 'bus-marker',
+            html: busIconHtml,
+            iconSize: [44, 44], iconAnchor: [22, 22],
+        });
+        let busMarker = null;
+
+        // Плавна анімація між позиціями
+        let animState = { from: null, to: null, startTime: 0, durationMs: 10000 };
+        function easeInOutQuad(t) {
+            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        }
+        function animateBus() {
+            if (busMarker && animState.to) {
+                const elapsed = performance.now() - animState.startTime;
+                const t = Math.min(1, elapsed / animState.durationMs);
+                const eased = easeInOutQuad(t);
+                const lat = animState.from[0] + (animState.to[0] - animState.from[0]) * eased;
+                const lng = animState.from[1] + (animState.to[1] - animState.from[1]) * eased;
+                busMarker.setLatLng([lat, lng]);
+            }
+            requestAnimationFrame(animateBus);
+        }
+        requestAnimationFrame(animateBus);
+
+        function moveBusTo(newPos, durationMs) {
+            if (!busMarker) {
+                busMarker = L.marker(newPos, {icon: busIcon, zIndexOffset: 2000}).addTo(map);
+                animState.from = newPos;
+                animState.to = newPos;
+                animState.startTime = performance.now();
+                animState.durationMs = durationMs;
+                return;
+            }
+            const current = busMarker.getLatLng();
+            animState.from = [current.lat, current.lng];
+            animState.to = newPos;
+            animState.startTime = performance.now();
+            animState.durationMs = durationMs;
+        }
+
+        function popupHtml(data) {
+            return `<div style="min-width:160px;">
+                <b style="color:#0369a1;"><i class="bi bi-bus-front-fill"></i> {{ T.gps_bus_here }}</b><br>
+                <small>{{ T.gps_speed }}: <b>${data.speed_kmh.toFixed(0)} {{ T.gps_speed_unit }}</b></small><br>
+                <small>{{ T.gps_progress }}: <b>${data.progress_percent.toFixed(0)}%</b></small><br>
+                <a href="${trackUrl}" style="font-size:12px;">{{ T.gps_detail_track }} →</a>
+            </div>`;
+        }
+
+        function pollBusPosition() {
+            const now = new Date();
+            // Показуємо автобус лише коли рейс реально у дорозі (між departure та arrival).
+            // У майбутніх або вже завершених рейсах маркер прибираємо - інакше виглядає так,
+            // ніби автобус їде хоча рейс ще навіть не почався.
+            const inTransit = now >= tripDeparture && now <= tripArrival;
+            if (!inTransit) {
+                if (busMarker) {
+                    map.removeLayer(busMarker);
+                    busMarker = null;
+                }
+                return;
+            }
+
+            fetch(positionUrl)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.lat == null || data.lng == null) return;
+
+                    // Точне snap-to-road: позиціонуємо саме між зазначеними зупинками.
+                    let pos = [data.lat, data.lng];
+                    if (routeCoords && data.nearest_stop_index != null && data.segment_t != null) {
+                        const snapped = pointAlongSegment(data.nearest_stop_index, data.segment_t);
+                        if (snapped) pos = snapped;
+                    } else if (routeCoords && data.progress_percent != null) {
+                        const snapped = pointAlongRoute(data.progress_percent / 100);
+                        if (snapped) pos = snapped.latlng;
+                    }
+
+                    // Плавно переміщуємо за 10 секунд (= інтервал опитування для live-рейсу)
+                    moveBusTo(pos, 10000);
+                    if (busMarker) {
+                        busMarker.bindPopup(popupHtml(data));
+                    }
+                })
+                .catch(e => console.warn('[GPS] Fetch error:', e));
+        }
+
+        // Стартуємо опитування лише якщо рейс зараз у дорозі.
+        // У майбутні рейси (як і завершені) автобус не показуємо на цій сторінці -
+        // користувач може перейти на /trip/<id>/track/ для demo-симуляції.
+        const isLive = new Date() >= tripDeparture && new Date() <= tripArrival;
+        if (isLive) {
+            osrmPromise.finally(() => {
+                pollBusPosition();
+                setInterval(pollBusPosition, 10000);
+            });
+        }
     }
 </script>
 {% endif %}
