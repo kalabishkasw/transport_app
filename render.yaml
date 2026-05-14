@@ -1,5 +1,5 @@
 # опис інфраструктури для Render.com
-# дозволяє створити веб-сервіс + базу одним кліком через "New Blueprint"
+
 databases:
   - name: transport-db
     plan: free
@@ -12,8 +12,8 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    buildCommand: "./build.sh"
-    startCommand: "gunicorn config.wsgi:application --workers 3 --bind 0.0.0.0:$PORT"
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --no-input"
+    startCommand: "python manage.py migrate --no-input && gunicorn config.wsgi:application --workers 3 --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
