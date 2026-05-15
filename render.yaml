@@ -3,6 +3,7 @@
 databases:
   - name: transport-db
     plan: free
+    region: frankfurt
     databaseName: transport_db
     user: transport_user
 
