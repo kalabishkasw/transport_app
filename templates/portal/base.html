@@ -303,6 +303,34 @@
             .hero h1 { font-size: 32px; }
             .trip-card { grid-template-columns: 1fr; }
             .trip-action { text-align: left; }
+
+            /* компактний хедер на планшетах і телефонах */
+            .navbar-public { padding: 6px 0; }
+            .navbar-brand-public {
+                font-size: 16px;
+                gap: 8px;
+                white-space: nowrap;
+            }
+            .navbar-brand-public img { height: 44px; }
+            .navbar-brand-public i { font-size: 22px; }
+
+            /* зменшую кнопки і прапор у мовному переключі */
+            .lang-switcher .btn { padding: 4px 6px; }
+            .flag-img { width: 18px; }
+
+            /* робимо кнопки логіну/реєстрації компактнішими */
+            .navbar-public .btn-sm { padding: 4px 10px; font-size: 13px; }
+            .navbar-public .nav-link-public { padding: 6px 8px; font-size: 13px; }
+
+            /* промо-банер компактніший */
+            #promo-banner { font-size: 12px; padding: 6px 36px 6px 12px !important; }
+        }
+
+        /* дуже вузькі екрани (старі/маленькі телефони) */
+        @media (max-width: 400px) {
+            .navbar-brand-public { font-size: 14px; gap: 6px; }
+            .navbar-brand-public img { height: 36px; }
+            .navbar-public .container { padding-left: 8px; padding-right: 8px; }
         }
 
         /* ====== City autocomplete ====== */
