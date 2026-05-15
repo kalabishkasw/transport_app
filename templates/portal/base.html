@@ -326,11 +326,26 @@
             #promo-banner { font-size: 12px; padding: 6px 36px 6px 12px !important; }
         }
 
+        /* вузькі екрани: приховую текст у кнопках входу/реєстрації, показую тільки іконки */
+        @media (max-width: 480px) {
+            .navbar-public .auth-text { display: none; }
+            .navbar-public .mobile-only-icon {
+                display: inline-block !important;
+                font-size: 18px;
+            }
+            .navbar-public .auth-link {
+                padding: 6px 10px;
+                min-width: 36px;
+                display: inline-flex; align-items: center; justify-content: center;
+            }
+        }
+
         /* дуже вузькі екрани (старі/маленькі телефони) */
         @media (max-width: 400px) {
             .navbar-brand-public { font-size: 14px; gap: 6px; }
             .navbar-brand-public img { height: 36px; }
             .navbar-public .container { padding-left: 8px; padding-right: 8px; }
+            .navbar-public .auth-link { padding: 5px 8px; min-width: 32px; }
         }
 
         /* ====== City autocomplete ====== */
@@ -608,13 +623,23 @@
                 </ul>
             </div>
             {% if user.is_authenticated %}
-                <a href="{% url 'portal:account' %}" class="nav-link-public">
-                    <i class="bi bi-person-circle"></i> {{ user.first_name|default:user.username }}
+                <a href="{% url 'portal:account' %}" class="nav-link-public auth-link">
+                    <i class="bi bi-person-circle"></i>
+                    <span class="auth-text">{{ user.first_name|default:user.username }}</span>
                 </a>
-                <a href="{% url 'portal:logout' %}" class="btn btn-sm btn-outline-secondary">{{ T.nav_logout }}</a>
+                <a href="{% url 'portal:logout' %}" class="btn btn-sm btn-outline-secondary auth-link">
+                    <i class="bi bi-box-arrow-right d-none mobile-only-icon"></i>
+                    <span class="auth-text">{{ T.nav_logout }}</span>
+                </a>
             {% else %}
-                <a href="{% url 'portal:login' %}" class="nav-link-public">{{ T.nav_login }}</a>
-                <a href="{% url 'portal:register' %}" class="btn btn-sm btn-primary">{{ T.nav_register }}</a>
+                <a href="{% url 'portal:login' %}" class="nav-link-public auth-link">
+                    <i class="bi bi-box-arrow-in-right d-none mobile-only-icon"></i>
+                    <span class="auth-text">{{ T.nav_login }}</span>
+                </a>
+                <a href="{% url 'portal:register' %}" class="btn btn-sm btn-primary auth-link">
+                    <i class="bi bi-person-plus-fill d-none mobile-only-icon"></i>
+                    <span class="auth-text">{{ T.nav_register }}</span>
+                </a>
             {% endif %}
         </div>
     </div>
