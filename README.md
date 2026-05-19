@@ -1,166 +1,138 @@
 # TransAuto Travel
 
-Веб-застосунок для підтримки діяльності міжнародної транспортної компанії, що спеціалізується на пасажирських автобусних перевезеннях між Україною та країнами ЄС. Дипломна робота, спеціальність 122 «Комп'ютерні науки», ДВНЗ «Ужгородський національний університет».
+Веб-застосунок для міжнародної транспортної компанії: пасажирські автобусні рейси з України до країн ЄС. Дипломна робота, спеціальність 122 «Комп'ютерні науки», ДВНЗ «Ужгородський національний університет», 2026.
 
-## Можливості
+Онлайн: https://transauto-travel.onrender.com
 
-**Клієнтський портал** (`/`):
-- пошук рейсів за містами і датою з підказками-альтернативами;
-- покрокове бронювання з вибором місця у схемі автобуса;
-- особистий кабінет з історією поїздок, бонусною програмою, відгуками;
-- псевдо-онлайн-оплата картою (демо-шлюз);
-- стеження за рейсом у реальному часі (GPS-симуляція з прив'язкою до OSRM-маршруту);
+## Що вміє
+
+Клієнтський сайт `/`:
+- пошук рейсів за містами і датою, з підказками альтернатив якщо нічого не знайшлося,
+- бронювання з вибором місця, контактів пасажирів, посадки/висадки,
+- mock-оплата карткою (анімований платіжний шлюз для демо),
+- стеження за рейсом у реальному часі з GPS-симуляцією і snap-to-road через OSRM,
+- особистий кабінет: історія поїздок, бонусні бали, відгуки,
 - двомовність UA/EN.
 
-**Диспетчерська панель** (`/manage/`):
-- дашборд з графіками (Chart.js): виручка факт + прогноз, рейси за статусом, топ-маршрути;
-- календар рейсів через FullCalendar;
-- CRUD клієнтів, автопарку, водіїв, маршрутів;
-- журнал аудиту (хто, коли, що змінив);
-- експорт замовлень і рейсів у Excel;
-- темна тема.
+Диспетчерська `/manage/`:
+- дашборд з графіками виручки (факт + прогноз), розподілом рейсів за статусом, топ-маршрутами,
+- календар рейсів (FullCalendar),
+- список замовлень з фільтрами і bulk-діями,
+- список ТЗ, водіїв, клієнтів, маршрутів,
+- журнал аудиту: хто що коли змінив,
+- експорт у Excel.
 
-**Документи**:
-- PDF квитка з QR-кодом;
-- PDF посадкового листа.
+Документи:
+- PDF квитка з QR-кодом,
+- PDF посадкового листа для водія.
 
-**Автоматика**:
-- middleware раз на 5 хв оновлює статуси рейсів (planned -> in_progress -> completed);
-- сигнали нараховують бали лояльності і відправляють листи-підтвердження;
-- transaction.atomic + select_for_update захищає від race conditions при бронюванні останнього місця.
+## Стек
 
-## Стек технологій
-
-| Компонент | Версія |
-| --- | --- |
-| Python | 3.12+ |
-| Django | 6.0 |
-| PostgreSQL | 18 |
-| Bootstrap | 5.3.3 |
-| Chart.js | 4.4.1 |
-| Leaflet + OSRM | 1.9.4 |
-| FullCalendar | 6.1.11 |
-| ReportLab + qrcode | для PDF |
-| openpyxl | для Excel |
+| Шар | Інструмент |
+|---|---|
+| Backend | Python 3.12, Django 6.0 |
+| БД | PostgreSQL 18, psycopg 3 |
+| Frontend | Bootstrap 5.3, Chart.js 4.4, Leaflet 1.9, FullCalendar 6.1 |
+| Карти | OSRM (маршрутизація), CartoDB Voyager (тайли) |
+| PDF | ReportLab + qrcode |
+| Excel | openpyxl |
+| Production | Gunicorn + WhiteNoise, Render Free |
 
 ## Як запустити локально
 
-### Передумови
-
-- Python 3.12+
-- PostgreSQL 18+ запущена локально
-- Створена БД `transport_db` з користувачем `postgres`
-
-### Кроки
+Потрібно: Python 3.12, PostgreSQL 18 з порожньою БД `transport_db`.
 
 ```bash
-# 1. Клонування і віртуальне оточення
 cd transport_app
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # Linux/Mac
 
-# 2. Залежності
 pip install -r requirements.txt
 
-# 3. Конфігурація
 copy .env.example .env          # Windows
 # cp .env.example .env          # Linux/Mac
-# Відкрийте .env і заповніть SECRET_KEY, DATABASE_PASSWORD
+# відкрити .env і заповнити SECRET_KEY та DATABASE_PASSWORD
 
-# 4. Згенеруйте SECRET_KEY (вставте у .env):
-python -c "import secrets; print(secrets.token_urlsafe(50))"
-
-# 5. Міграції
 python manage.py migrate
-
-# 6. Адмін-користувач
 python manage.py createsuperuser
-
-# 7. Демо-дані (~1500 рейсів, 23k замовлень, 37k квитків)
-python manage.py seed_demo_data
-python manage.py seed_bookings
-python manage.py seed_reviews
-
-# 8. Запуск
 python manage.py runserver
 ```
 
-Доступні URL після запуску:
-- `http://127.0.0.1:8000/` - клієнтський сайт
-- `http://127.0.0.1:8000/manage/` - диспетчер (логін як superuser)
-- `http://127.0.0.1:8000/admin/` - Django admin
+Згенерувати `SECRET_KEY`:
 
-### Якщо PowerShell не приймає кирилицю
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(50))"
+```
+
+Якщо PowerShell не дає кирилицю:
 
 ```powershell
 $env:PYTHONIOENCODING = 'utf-8'
-python manage.py runserver
 ```
 
-## Структура проекту
+Доступні адреси:
+- `http://127.0.0.1:8000/` клієнтський сайт,
+- `http://127.0.0.1:8000/manage/` диспетчерська (логін як superuser),
+- `http://127.0.0.1:8000/admin/` Django admin.
 
-```
-transport_app/
-  config/                 # settings.py, urls.py
-  apps/
-    accounts/             # User з ролями + бонусні бали
-    customers/            # Корпоративні клієнти
-    fleet/                # Vehicle + Driver
-    routes/               # Route, Stop, Trip
-    orders/               # Order, Ticket, PromoCode + signals
-    reviews/              # Review про рейс
-    documents/            # PDF (services.py)
-    core/                 # Диспетчерська панель /manage/ + middleware
-    portal/               # Публічний сайт + booking_service.py + gps_simulator.py
-  templates/              # Загальні шаблони
-  static/                 # CSS, JS, картинки
-  manage.py
-  requirements.txt
-  .env.example
-```
+## Демо-дані
 
-## Корисні management-команди
+Залити порожню БД даними для презентації (10 водіїв, 10 ТЗ, 17 маршрутів, ~1490 рейсів, ~23k замовлень, ~37k квитків):
 
 ```bash
-# Скинути і заповнити демо-дані заново
 python manage.py seed_demo_data --reset
 python manage.py seed_bookings --reset
-
-# Заповнити "пробіли" у графіку виручки за останні 14 днів
-python manage.py fill_recent_bookings --days 14 --orders-per-day 60
-
-# Виправити квитки де висадка раніше за посадку
-python manage.py fix_ticket_stops
-
-# Розподілити дати замовлень рівномірно (1-90 днів до рейсу)
-python manage.py redistribute_order_dates
-
-# Оновити статуси рейсів (зазвичай це робить middleware автоматично)
+python manage.py seed_reviews
+python manage.py seed_companies
 python manage.py update_trip_statuses
+python manage.py redistribute_order_dates
+python manage.py fill_recent_bookings
+python manage.py backfill_loyalty
 ```
 
-## Production-deploy
+Решта seed-команд описані у `apps/core/management/commands/` (вони мають короткі docstring у кожному файлі).
 
-1. Встановити `DEBUG=False` у `.env`, заповнити `ALLOWED_HOSTS`
-2. Згенерувати новий `SECRET_KEY`, не використовувати дефолтний
-3. Виконати `python manage.py collectstatic`
-4. Запустити через `gunicorn config.wsgi:application` (приклад):
-   ```bash
-   gunicorn --workers 4 --bind 0.0.0.0:8000 config.wsgi:application
-   ```
-5. Поставити nginx як reverse-proxy з SSL-сертифікатом (Let's Encrypt)
-6. Опційно: підключити Redis для кешу через `CACHE_BACKEND` у `.env`
-7. Перевести email на справжній SMTP (через `EMAIL_BACKEND`)
-8. Налаштувати cron/systemd-timer на `python manage.py update_trip_statuses` щогодини
+## Структура
+
+```
+config/                  settings.py, urls.py
+apps/
+  accounts/              User з ролями і бонусними балами
+  customers/             корпоративні клієнти
+  fleet/                 Vehicle + Driver
+  routes/                Route, Stop, Trip
+  orders/                Order, Ticket, PromoCode + signals
+  reviews/               відгуки клієнтів
+  documents/             PDF з QR (services.py)
+  core/                  диспетчерська /manage/, middleware, audit log
+  portal/                публічний сайт + booking_service.py + gps_simulator.py
+templates/               шаблони
+static/                  CSS, JS, картинки
+```
+
+## Деплой
+
+Розгорнуто на Render Free плані з PostgreSQL у регіоні Frankfurt. Конфігурація у `render.yaml`.
+
+Що зробити для самостійного деплою на Render:
+1. Створити новий Web Service з GitHub-репо.
+2. Прив'язати PostgreSQL-БД у тому самому регіоні (інакше внутрішній хост не резолвиться).
+3. Render автоматично прочитає `render.yaml` і встановить env-змінні: `DEBUG=False`, `ALLOWED_HOSTS=.onrender.com`, `SECRET_KEY` (генерує сам), `DATABASE_URL` (з прив'язаної БД), `PYTHON_VERSION`.
+4. У startCommand виконається `migrate` потім стартує gunicorn.
+
+Render Free має обмеження: сервіс «засинає» після 15 хв бездіяльності (перший запит після сну ~30-60 сек), безкоштовна Postgres видаляється через 90 днів від створення.
 
 ## Безпека
 
-- transaction.atomic + select_for_update захищають бронювання від race conditions
-- IDOR-перевірки на доступ до чужих замовлень, квитків, PDF
-- AUTH_PASSWORD_VALIDATORS обмежують слабкі паролі (мін. 8 символів, не суцільні цифри)
-- Захист від open redirect через `url_has_allowed_host_and_scheme`
-- У production: SECURE_SSL_REDIRECT, SESSION_COOKIE_SECURE, HSTS, X_FRAME_OPTIONS=DENY
+Що зроблено для production:
+- `select_for_update` на Trip і PromoCode у `booking_service.py` проти race condition коли два клієнти беруть одне останнє місце,
+- IDOR-перевірки у `booking_done`, `booking_detail`, `cancel_booking`, PDF-видачі квитків,
+- `staff_required` на усіх `/manage/` views, `@require_POST` на logout,
+- `AUTH_PASSWORD_VALIDATORS` обмежують слабкі паролі (мін. 8 символів, не суцільні цифри),
+- захист від open redirect через `url_has_allowed_host_and_scheme`,
+- XLSX-injection захист у експортах через префікс апострофа,
+- при `DEBUG=False` вмикаються `SECURE_SSL_REDIRECT`, `HSTS`, `SESSION_COOKIE_SECURE`, `X_FRAME_OPTIONS=DENY`.
 
 ## Автор
 

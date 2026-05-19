@@ -14,6 +14,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
 from apps.orders.models import Order, Ticket
 from apps.reviews.models import Review
@@ -28,9 +29,9 @@ from .forms import (
 )
 
 
-# ----------------------------------------------------------------------
-# Лендінг та пошук
-# ----------------------------------------------------------------------
+
+# лендінг та пошук
+
 
 COUNTRY_NAMES_UK = {
     'UA': 'Україна', 'PL': 'Польща', 'CZ': 'Чехія', 'SK': 'Словаччина',
@@ -46,8 +47,8 @@ COUNTRY_NAMES_EN = {
 
 def _pluralize_uk(n, one, few, many):
     """
-    Повертає правильну форму іменника для числа n за українськими правилами.
-    Приклад: _pluralize_uk(1, 'день', 'дні', 'днів') -> 'день'
+    повертає правильну форму іменника для числа n за українськими правилами.
+    приклад: _pluralize_uk(1, 'день', 'дні', 'днів') -> 'день'
              _pluralize_uk(3, 'день', 'дні', 'днів') -> 'дні'
              _pluralize_uk(5, 'день', 'дні', 'днів') -> 'днів'
     """
@@ -68,8 +69,8 @@ CITIES_CACHE_TTL = 600  # 10 хвилин
 
 def _all_cities():
     """
-    Унікальні назви всіх міст (для backward compat).
-    Кешуємо у memory-cache на 10 хв, щоб не довбати БД на кожен рендер головної.
+    унікальні назви всіх міст (для backward compat).
+    кешуємо у memory-cache на 10 хв, щоб не довбати БД на кожен рендер головної.
     """
     cached = cache.get('portal_all_cities_v1')
     if cached is not None:
@@ -86,8 +87,8 @@ def _all_cities():
 
 def _cities_with_country(lang='uk'):
     """
-    Список (city, country_code, country_name) для autocomplete.
-    Кешуємо окремо для кожної мови.
+    список (city, country_code, country_name) для autocomplete.
+    кешуємо окремо для кожної мови.
     """
     cache_key = f'portal_cities_with_country_v1_{lang}'
     cached = cache.get(cache_key)
@@ -118,7 +119,7 @@ def _cities_with_country(lang='uk'):
 
 
 def home(request):
-    """Лендінг з пошуковою формою та найближчими рейсами."""
+    """лендінг з пошуковою формою та найближчими рейсами."""
     from .i18n import get_translations
     today = timezone.now().date()
     popular_routes = (
@@ -163,7 +164,7 @@ def home(request):
 
 
 def search(request):
-    """Пошук рейсів за містами та датою."""
+    """пошук рейсів за містами та датою."""
     form = SearchForm(request.GET or None)
     trips = []
     searched = False
@@ -212,7 +213,7 @@ def search(request):
         for t in trips:
             t.free = max(0, (t.vehicle.seats_total or 0) - t.sold)
 
-        # Якщо нічого не знайшли - готуємо альтернативи для користувача.
+        # якщо нічого не знайшли - готуємо альтернативи для користувача.
         if not trips:
             now = timezone.now()
             alt_qs = (
@@ -228,7 +229,7 @@ def search(request):
                 )
             )
 
-            # 1. Той самий маршрут на дати ±7 днів від обраної.
+            # 1. той самий маршрут на дати ±7 днів від обраної.
             if origin and destination and search_date:
                 date_min = search_date - timedelta(days=7)
                 date_max = search_date + timedelta(days=7)
@@ -251,7 +252,7 @@ def search(request):
                 for t in alternatives['nearby_dates']:
                     t.free = max(0, (t.vehicle.seats_total or 0) - t.sold)
 
-            # 2. Інші рейси у той самий пункт призначення (з інших міст).
+            # 2. інші рейси у той самий пункт призначення (з інших міст).
             if destination:
                 same_dest = (
                     alt_qs
@@ -266,7 +267,7 @@ def search(request):
                 for t in alternatives['same_destination']:
                     t.free = max(0, (t.vehicle.seats_total or 0) - t.sold)
 
-            # 3. Інші напрями з того ж міста відправлення.
+            # 3. інші напрями з того ж міста відправлення.
             if origin:
                 same_orig = (
                     alt_qs
@@ -295,12 +296,12 @@ def search(request):
     })
 
 
-# ----------------------------------------------------------------------
-# Деталі рейсу та бронювання
-# ----------------------------------------------------------------------
+
+# деталі рейсу та бронювання
+
 
 def trip_detail(request, trip_id):
-    """Публічна сторінка рейсу з картою та кнопкою купівлі."""
+    """публічна сторінка рейсу з картою та кнопкою купівлі."""
     from django.db.models import Avg
     trip = get_object_or_404(
         Trip.objects.select_related('route', 'vehicle', 'main_driver__user'),
@@ -309,7 +310,7 @@ def trip_detail(request, trip_id):
     if trip.status not in ('on_sale', 'planned'):
         raise Http404('Рейс недоступний для бронювання.')
 
-    # Відгуки про цей маршрут (по всіх рейсах цього маршруту)
+    # відгуки про цей маршрут (по всіх рейсах цього маршруту)
     reviews_qs = Review.objects.filter(
         trip__route=trip.route,
         is_published=True,
@@ -353,8 +354,8 @@ def trip_detail(request, trip_id):
 
 def trip_track(request, trip_id):
     """
-    Сторінка відстеження рейсу у реальному часі.
-    Доступна для будь-якого активного або в дорозі рейсу.
+    сторінка відстеження рейсу у реальному часі.
+    доступна для будь-якого активного або в дорозі рейсу.
     """
     import json
     trip = get_object_or_404(
@@ -391,7 +392,7 @@ def trip_position_api(request, trip_id):
     JSON API: повертає поточну псевдо-GPS позицію автобуса.
     Викликається з JavaScript кожні 5-10 секунд.
 
-    Параметр ?demo=1 запускає прискорену симуляцію (для демо рейсів,
+    параметр ?demo=1 запускає прискорену симуляцію (для демо рейсів,
     які заплановано на майбутнє).
     """
     from .gps_simulator import simulate_position
@@ -410,11 +411,11 @@ def trip_position_api(request, trip_id):
                 'status': 'cancelled',
                 'message': 'Рейс скасовано',
             })
-        # Немає координат у зупинок або рейс ще не почався.
+        # немає координат у зупинок або рейс ще не почався.
         now = timezone.now()
         if trip.departure_at > now:
             total_minutes = int((trip.departure_at - now).total_seconds() / 60)
-            # Форматування у дні/години/хвилини для зручного читання
+            # форматування у дні/години/хвилини для зручного читання
             days = total_minutes // (24 * 60)
             hours = (total_minutes % (24 * 60)) // 60
             minutes = total_minutes % 60
@@ -457,8 +458,8 @@ def trip_position_api(request, trip_id):
 
 def booking_form(request, trip_id):
     """
-    Форма бронювання: контактні дані, кількість пасажирів, дані пасажирів.
-    Підтримує і анонімне, і авторизоване бронювання.
+    форма бронювання: контактні дані, кількість пасажирів, дані пасажирів.
+    підтримує і анонімне, і авторизоване бронювання.
     """
     trip = get_object_or_404(
         Trip.objects.select_related('route', 'vehicle'),
@@ -501,6 +502,23 @@ def booking_form(request, trip_id):
         ]
         all_valid = contact_form.is_valid() and all(f.is_valid() for f in passenger_forms)
 
+        # допоміжна функція щоб не дублювати рендер форми при помилках,
+        # зберігаючи усі заповнені поля контакту і пасажирів
+        def _render_form_with_errors():
+            return render(request, 'portal/booking_form.html', {
+                'trip': trip,
+                'free': free,
+                'count': count,
+                'count_options': list(range(1, min(free, 10) + 1)),
+                'contact_form': contact_form,
+                'passenger_forms': passenger_forms,
+                'boarding_options': boarding_options,
+                'alighting_options': alighting_options,
+                'total_price': trip.base_price * count,
+                'occupied_seats': occupied_seats,
+                'total_seats': trip.vehicle.seats_total or 0,
+            })
+
         if all_valid:
             data = contact_form.cleaned_data
             try:
@@ -508,7 +526,7 @@ def booking_form(request, trip_id):
                 alighting = Stop.objects.get(pk=data['alighting_stop'], route=trip.route)
             except Stop.DoesNotExist:
                 messages.error(request, 'Невірно обрано пункт посадки чи висадки.')
-                return redirect('portal:booking_form', trip_id=trip.id)
+                return _render_form_with_errors()
 
             promo_input = (request.POST.get('promo_code') or '').strip().upper()
             use_points_input = 0
@@ -518,7 +536,7 @@ def booking_form(request, trip_id):
                 except ValueError:
                     use_points_input = 0
 
-            # Уся бізнес-логіка створення замовлення в одній транзакції
+            # уся бізнес-логіка створення замовлення в одній транзакції
             # з блокуванням рейсу та промокоду, щоб уникнути race condition.
             try:
                 from .booking_service import create_booking, BookingError
@@ -533,14 +551,21 @@ def booking_form(request, trip_id):
                     use_loyalty_points=use_points_input,
                 )
             except BookingError as e:
+                # помилка бізнес-логіки (немає місць, зайнятий seat, неправильні зупинки)
+                # повертаємо форму з даними щоб користувач не вводив усе наново
                 messages.error(request, str(e))
-                return redirect('portal:booking_form', trip_id=trip.id)
+                return _render_form_with_errors()
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).exception('Невідома помилка при бронюванні рейсу %s', trip.id)
                 messages.error(request, f'Сталася технічна помилка: {e}. Спробуйте ще раз або звяжіться з підтримкою.')
-                return redirect('portal:booking_form', trip_id=trip.id)
+                return _render_form_with_errors()
 
+            # запамʼятовуємо id свіжого замовлення у сесії, щоб дати доступ
+            # до booking_done навіть анонімному (незалогіненому) користувачу
+            recent_ids = request.session.get('recent_booking_ids', [])
+            recent_ids.append(order.id)
+            request.session['recent_booking_ids'] = recent_ids[-10:]
             messages.success(request, 'Замовлення створено успішно.')
             return redirect('portal:booking_done', order_id=order.id)
     else:
@@ -578,11 +603,24 @@ def booking_form(request, trip_id):
 
 
 def booking_done(request, order_id):
-    """Сторінка підтвердження замовлення."""
+    """
+    сторінка підтвердження замовлення. Доступ дозволено staff,
+    власнику замовлення, або тому хто щойно його створив (recent_booking_ids у сесії).
+    Без перевірки був би IDOR - чужий міг би переглянути контакт і список пасажирів
+    знаючи лише номер замовлення.
+    """
     order = get_object_or_404(
         Order.objects.select_related('trip__route', 'trip__vehicle'),
         pk=order_id,
     )
+    recent_ids = request.session.get('recent_booking_ids', [])
+    has_access = (
+        request.user.is_staff
+        or _is_order_owner(request.user, order)
+        or order.id in recent_ids
+    )
+    if not has_access:
+        raise Http404('Замовлення не знайдено.')
     tickets = order.tickets.select_related('boarding_stop', 'alighting_stop').all()
     return render(request, 'portal/booking_done.html', {
         'order': order,
@@ -590,15 +628,15 @@ def booking_done(request, order_id):
     })
 
 
-# ----------------------------------------------------------------------
+
 # Mock онлайн-оплата (псевдо-платіжний шлюз для демонстрації)
-# ----------------------------------------------------------------------
+
 
 @login_required(login_url='/login/')
 def payment_form(request, order_id):
     """
-    Сторінка псевдо-оплати: імітує платіжний шлюз типу LiqPay чи Fondy.
-    Доступ лише власнику замовлення або співробітнику.
+    сторінка псевдо-оплати: імітує платіжний шлюз типу LiqPay чи Fondy.
+    доступ лише власнику замовлення або співробітнику.
     """
     order = get_object_or_404(
         Order.objects.select_related('trip__route', 'trip__vehicle'),
@@ -644,7 +682,7 @@ def payment_process(request, order_id):
     card_expiry = (request.POST.get('card_expiry') or '').strip()
     card_holder = (request.POST.get('card_holder') or '').strip()
 
-    # Мінімальна валідація.
+    # мінімальна валідація.
     errors = []
     if not card_number.isdigit() or not (13 <= len(card_number) <= 19):
         errors.append('Невірний номер картки.')
@@ -655,7 +693,7 @@ def payment_process(request, order_id):
     if not card_holder:
         errors.append('Введіть імя власника картки.')
 
-    # "Тестова картка-відмова": номер закінчується на 0000.
+    # "тестова картка-відмова": номер закінчується на 0000.
     if card_number.endswith('0000'):
         errors.append('Платіж відхилено банком (тестова картка для demo).')
 
@@ -664,7 +702,7 @@ def payment_process(request, order_id):
             messages.error(request, e)
         return redirect('portal:payment_form', order_id=order.id)
 
-    # Успішна "оплата".
+    # успішна "оплата".
     with transaction.atomic():
         locked_order = Order.objects.select_for_update().get(pk=order.pk)
         if locked_order.status in (Order.Status.PAID, Order.Status.COMPLETED):
@@ -685,12 +723,12 @@ def payment_process(request, order_id):
     return redirect('portal:booking_done', order_id=order.id)
 
 
-# ----------------------------------------------------------------------
-# Авторизація клієнта
-# ----------------------------------------------------------------------
+
+# авторизація клієнта
+
 
 def client_login(request):
-    """Вхід клієнта (за email)."""
+    """вхід клієнта (за email)."""
     next_url = request.GET.get('next') or request.POST.get('next') or '/account/'
     error = None
     if request.method == 'POST':
@@ -701,7 +739,7 @@ def client_login(request):
             user = authenticate(request, username=username.lower(), password=password)
         if user is not None:
             login(request, user)
-            # Захист від open redirect: дозволяємо лише URL у межах нашого хосту.
+            # захист від open redirect: дозволяємо лише URL у межах нашого хосту.
             # startswith('/') не достатньо: '//evil.com' теж починається зі '/' але
             # це протокол-relative URL, що повертає на чужий домен.
             if url_has_allowed_host_and_scheme(
@@ -716,7 +754,7 @@ def client_login(request):
 
 
 def client_register(request):
-    """Реєстрація клієнта."""
+    """реєстрація клієнта."""
     if request.method == 'POST':
         form = ClientRegisterForm(request.POST)
         if form.is_valid():
@@ -729,7 +767,10 @@ def client_register(request):
     return render(request, 'portal/register.html', {'form': form})
 
 
+@require_POST
 def client_logout(request):
+    """вихід тільки через POST. Інакше можна вилогувати з зовнішнього сайту
+    через звичайний <img src="...logout/"> або <a href> (CSRF logout)."""
     logout(request)
     return redirect('portal:home')
 
@@ -743,9 +784,9 @@ def set_language(request, lang_code):
     return redirect(next_url)
 
 
-# ----------------------------------------------------------------------
-# Особистий кабінет
-# ----------------------------------------------------------------------
+
+# особистий кабінет
+
 
 @login_required(login_url='/login/')
 def account(request):
@@ -774,13 +815,13 @@ def account(request):
 
 @login_required(login_url='/login/')
 def booking_detail(request, order_id):
-    """Деталі замовлення для клієнта (тільки своє)."""
+    """деталі замовлення для клієнта (тільки своє)."""
     base_qs = Order.objects.select_related('trip__route', 'trip__vehicle')
     if request.user.is_staff:
-        # Працівникам видно будь-яке замовлення.
+        # працівникам видно будь-яке замовлення.
         order = get_object_or_404(base_qs, pk=order_id)
     else:
-        # Клієнт бачить лише свої: або створив сам, або email збігається.
+        # клієнт бачить лише свої: або створив сам, або email збігається.
         owner_filter = Q(created_by=request.user)
         if request.user.email:
             owner_filter |= Q(contact_email__iexact=request.user.email)
@@ -796,7 +837,7 @@ def booking_detail(request, order_id):
 
 
 def _is_order_owner(user, order):
-    """Чи цей користувач є власником замовлення (створив або email збігається)."""
+    """чи цей користувач є власником замовлення (створив або email збігається)."""
     if not user.is_authenticated:
         return False
     if order.created_by_id == user.id:
@@ -819,7 +860,7 @@ def _user_orders_filter(user):
 
 
 def _can_cancel_order(order):
-    """Скасування дозволено не пізніше ніж за 24 години до рейсу
+    """скасування дозволено не пізніше ніж за 24 години до рейсу
     і лише для активних статусів."""
     if order.status in (
         Order.Status.CANCELLED, Order.Status.REFUNDED,
@@ -832,7 +873,7 @@ def _can_cancel_order(order):
 
 @login_required(login_url='/login/')
 def cancel_booking(request, order_id):
-    """Скасування замовлення клієнтом. POST-only."""
+    """скасування замовлення клієнтом. POST-only."""
     if request.method != 'POST':
         return redirect('portal:booking_detail', order_id=order_id)
 
@@ -853,10 +894,20 @@ def cancel_booking(request, order_id):
         )
         return redirect('portal:booking_detail', order_id=order.id)
 
+    # лочу order на час оновлення, щоб два паралельні запити (наприклад
+    # подвійний клік або одночасне скасування з двох вкладок) не призводили
+    # до некоректного стану
     with transaction.atomic():
-        order.tickets.update(status=Ticket.Status.CANCELLED)
-        order.status = Order.Status.REFUNDED
-        order.save(update_fields=['status', 'updated_at'])
+        locked = Order.objects.select_for_update().get(pk=order.pk)
+        if locked.status in (
+            Order.Status.CANCELLED, Order.Status.REFUNDED,
+            Order.Status.COMPLETED, Order.Status.IN_PROGRESS,
+        ):
+            messages.warning(request, 'Стан замовлення вже змінився, скасування неможливе.')
+            return redirect('portal:booking_detail', order_id=order.id)
+        locked.tickets.update(status=Ticket.Status.CANCELLED)
+        locked.status = Order.Status.REFUNDED
+        locked.save(update_fields=['status', 'updated_at'])
 
     messages.success(
         request,
@@ -866,9 +917,9 @@ def cancel_booking(request, order_id):
     return redirect('portal:account')
 
 
-# ----------------------------------------------------------------------
-# Відгуки та бонусна програма
-# ----------------------------------------------------------------------
+
+# відгуки та бонусна програма
+
 
 @login_required(login_url='/login/')
 def leave_review(request, order_id):
@@ -908,14 +959,14 @@ def leave_review(request, order_id):
 
 @login_required(login_url='/login/')
 def loyalty(request):
-    """Сторінка бонусної програми у кабінеті клієнта."""
+    """сторінка бонусної програми у кабінеті клієнта."""
     user = request.user
     completed_orders = Order.objects.filter(
         created_by=user,
         status=Order.Status.COMPLETED,
     ).select_related('trip__route').order_by('-trip__departure_at')[:20]
 
-    # Прогрес до наступного рівня. Рівні задаються у settings.LOYALTY_LEVELS,
+    # прогрес до наступного рівня. Рівні задаються у settings.LOYALTY_LEVELS,
     # формат: [(name, min_points, color_hex), ...]
     from django.conf import settings as django_settings
     levels = [(name, threshold) for name, threshold, _ in django_settings.LOYALTY_LEVELS]

@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}Бронювання {{ order.order_number }} | TransAuto Travel{% endblock %}
+{% block title %}{{ T.bd2_order_word }} {{ order.order_number }} | TransAuto Travel{% endblock %}
 
 {% block content %}
 
@@ -8,7 +8,7 @@
 <div class="container">
 
     <a href="{% url 'portal:account' %}" class="text-muted text-decoration-none small">
-        <i class="bi bi-arrow-left"></i> Назад до кабінету
+        <i class="bi bi-arrow-left"></i> {{ T.bd2_back_account }}
     </a>
 
     <div class="row g-4 mt-2">
@@ -17,16 +17,16 @@
             <div class="card p-4 border-0 shadow-sm mb-3">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <div class="text-muted small">Замовлення</div>
+                        <div class="text-muted small">{{ T.bd2_order_word }}</div>
                         <h2 class="mb-1">{{ order.order_number }}</h2>
-                        <div class="text-muted small">Створено {{ order.created_at|date:"d.m.Y о H:i" }}</div>
+                        <div class="text-muted small">{{ T.bd2_created_at }} {{ order.created_at|date:"d.m.Y H:i" }}</div>
                     </div>
                     <span class="pill">{{ order.get_status_display }}</span>
                 </div>
             </div>
 
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> Рейс</h5>
+                <h5 class="mb-3"><i class="bi bi-bus-front text-primary"></i> {{ T.bd2_trip_section }}</h5>
                 <div class="row g-3">
                     <div class="col-md-7">
                         <div class="trip-route">
@@ -42,9 +42,9 @@
                         </div>
                     </div>
                     <div class="col-md-5">
-                        <div class="text-muted small">Дата відправлення</div>
+                        <div class="text-muted small">{{ T.bd2_departure_date }}</div>
                         <div class="fw-semibold">{{ order.trip.departure_at|date:"d.m.Y" }}</div>
-                        <div class="text-muted small mt-2">Транспорт</div>
+                        <div class="text-muted small mt-2">{{ T.bd2_transport_section }}</div>
                         <div class="fw-semibold">{{ order.trip.vehicle.brand }} {{ order.trip.vehicle.model }}</div>
                         <div class="small text-muted">{{ order.trip.vehicle.registration_number }}</div>
                     </div>
@@ -52,14 +52,14 @@
             </div>
 
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-ticket-perforated text-primary"></i> Квитки ({{ tickets|length }})</h5>
+                <h5 class="mb-3"><i class="bi bi-ticket-perforated text-primary"></i> {{ T.bd2_tickets_title }} ({{ tickets|length }})</h5>
                 {% for t in tickets %}
                 <div class="d-flex justify-content-between align-items-center py-3 {% if not forloop.last %}border-bottom{% endif %}">
                     <div>
                         <div class="fw-semibold">{{ t.passenger_last_name }} {{ t.passenger_first_name }}</div>
                         <div class="small text-muted">
                             № {{ t.ticket_number }} · {{ t.boarding_stop.city }} → {{ t.alighting_stop.city }}
-                            {% if t.seat_number %} · місце {{ t.seat_number }}{% endif %}
+                            {% if t.seat_number %} · {{ T.bd2_seat_word }} {{ t.seat_number }}{% endif %}
                         </div>
                         <div class="small text-muted">
                             {{ t.get_document_type_display }}: {{ t.document_number }}
@@ -70,7 +70,7 @@
                         <span class="pill">{{ t.get_status_display }}</span>
                         <div class="mt-1">
                             <a href="{% url 'documents:ticket_pdf' t.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> PDF квиток
+                                <i class="bi bi-download"></i> {{ T.bd2_pdf_ticket }}
                             </a>
                         </div>
                     </div>
@@ -82,18 +82,18 @@
 
         <div class="col-lg-4">
             <div class="card p-4 border-0 shadow-sm">
-                <h5 class="mb-3">Підсумок</h5>
+                <h5 class="mb-3">{{ T.bd2_summary_title }}</h5>
                 <div class="d-flex justify-content-between mb-2 small">
-                    <span class="text-muted">Квитків</span>
+                    <span class="text-muted">{{ T.bd2_tickets_short }}</span>
                     <span>{{ tickets|length }}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2 small">
-                    <span class="text-muted">Спосіб оплати</span>
-                    <span>{{ order.get_payment_method_display|default:"Не вказано" }}</span>
+                    <span class="text-muted">{{ T.bd2_payment_method }}</span>
+                    <span>{{ order.get_payment_method_display|default:T.bd2_not_set }}</span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between align-items-baseline">
-                    <span>До сплати</span>
+                    <span>{{ T.bd2_to_pay_word }}</span>
                     <div>
                         <span style="font-size:24px; font-weight:800; color:var(--primary);">
                             {{ order.total_price|floatformat:0 }}
@@ -107,11 +107,11 @@
             <div class="card p-3 border-0 shadow-sm mt-3" style="background: linear-gradient(135deg,#f0f9ff,#e0f2fe);">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <h6 class="mb-1" style="color: var(--primary);"><i class="bi bi-credit-card"></i> Сплатити онлайн</h6>
-                        <div class="small text-muted">Безпечна оплата карткою прямо зараз.</div>
+                        <h6 class="mb-1" style="color: var(--primary);"><i class="bi bi-credit-card"></i> {{ T.bd2_pay_card_title }}</h6>
+                        <div class="small text-muted">{{ T.bd2_pay_card_text }}</div>
                     </div>
                     <a href="{% url 'portal:payment_form' order.id %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-shield-lock"></i> Сплатити
+                        <i class="bi bi-shield-lock"></i> {{ T.bd2_pay_card_btn }}
                     </a>
                 </div>
             </div>
@@ -121,11 +121,11 @@
             <div class="card p-3 border-0 shadow-sm mt-3" style="background: linear-gradient(135deg,#ecfdf5,#d1fae5);">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <h6 class="mb-1" style="color: #047857;"><i class="bi bi-broadcast"></i> Відстеження рейсу</h6>
-                        <div class="small text-muted">Дивіться позицію автобуса у реальному часі.</div>
+                        <h6 class="mb-1" style="color: #047857;"><i class="bi bi-broadcast"></i> {{ T.bd2_track_title }}</h6>
+                        <div class="small text-muted">{{ T.bd2_track_text }}</div>
                     </div>
                     <a href="{% url 'portal:trip_track' order.trip.id %}" class="btn btn-success btn-sm">
-                        <i class="bi bi-geo-alt-fill"></i> Стежити
+                        <i class="bi bi-geo-alt-fill"></i> {{ T.bd2_track_btn }}
                     </a>
                 </div>
             </div>
@@ -133,7 +133,7 @@
 
             <div class="alert alert-info border-0 mt-3 small">
                 <i class="bi bi-info-circle"></i>
-                Збережіть PDF-квитки у телефоні. На посадці пред'явіть водію разом з документом, що посвідчує особу.
+                {{ T.bd2_save_pdf_info }}
             </div>
 
             {% if order.status == 'completed' %}
@@ -141,12 +141,12 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h6 class="mb-1" style="color: var(--primary);">
-                            <i class="bi bi-star-fill"></i> Поділіться враженнями
+                            <i class="bi bi-star-fill"></i> {{ T.bd2_review_title }}
                         </h6>
-                        <div class="small text-muted">Ваша оцінка допоможе іншим обрати маршрут.</div>
+                        <div class="small text-muted">{{ T.bd2_review_text }}</div>
                     </div>
                     <a href="{% url 'portal:leave_review' order.id %}" class="btn btn-primary">
-                        <i class="bi bi-pencil-square"></i> Залишити відгук
+                        <i class="bi bi-pencil-square"></i> {{ T.bd2_review_btn }}
                     </a>
                 </div>
             </div>
@@ -156,12 +156,12 @@
             <div class="card p-3 border-danger-subtle mt-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <h6 class="mb-1 text-danger">Скасування замовлення</h6>
-                        <div class="small text-muted">Можливе не пізніше ніж за 24 години до рейсу.</div>
+                        <h6 class="mb-1 text-danger">{{ T.bd2_cancel_title }}</h6>
+                        <div class="small text-muted">{{ T.bd2_cancel_text }}</div>
                     </div>
                     <button type="button" class="btn btn-outline-danger"
                             data-bs-toggle="modal" data-bs-target="#cancelModal">
-                        <i class="bi bi-x-circle"></i> Скасувати
+                        <i class="bi bi-x-circle"></i> {{ T.bd2_cancel_btn }}
                     </button>
                 </div>
             </div>
@@ -176,20 +176,19 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Скасувати замовлення?</h5>
+                <h5 class="modal-title">{{ T.bd2_modal_title }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Ви скасовуєте замовлення <b>{{ order.order_number }}</b> на маршрут
+                <p>{{ T.bd2_modal_text_intro }} <b>{{ order.order_number }}</b> {{ T.bd2_modal_text_route }}
                    <b>{{ order.trip.route.name }}</b> ({{ order.trip.departure_at|date:"d.m.Y H:i" }}).</p>
-                <p class="text-muted small mb-0">Кошти буде повернуто на картку протягом 5 робочих днів
-                    згідно з умовами перевезення.</p>
+                <p class="text-muted small mb-0">{{ T.bd2_modal_refund_note }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Не скасовувати</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ T.bd2_modal_no_btn }}</button>
                 <form method="post" action="{% url 'portal:cancel_booking' order.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Так, скасувати</button>
+                    <button type="submit" class="btn btn-danger">{{ T.bd2_modal_yes_btn }}</button>
                 </form>
             </div>
         </div>

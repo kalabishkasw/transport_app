@@ -12,6 +12,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from .models import Order, Ticket
 
@@ -38,7 +39,7 @@ def recalc_order_total_on_delete(sender, instance, **kwargs):
     try:
         instance.order.recalculate_total()
     except Exception:
-        # Замовлення могло бути видалене разом з квитком - це нормально.
+        # замовлення могло бути видалене разом з квитком - це норм
         logger.warning(
             'Перерахунок замовлення %s не виконано (можливо, видалене разом з квитком)',
             instance.order_id,
@@ -47,8 +48,13 @@ def recalc_order_total_on_delete(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=Order)
 def award_loyalty_points_on_completion(sender, instance, **kwargs):
-    """Нараховуємо клієнту бонусні бали коли замовлення стає COMPLETED."""
+    """нараховую клієнту бонусні бали коли замовлення стає COMPLETED.
+    Перевіряємо loyalty_awarded_at щоб не нарахувати двічі (наприклад якщо
+    middleware вже зробив це через bulk update)."""
     if not instance.pk or not instance.created_by_id:
+        return
+    if instance.loyalty_awarded_at:
+        # вже нараховано раніше, не дублюємо
         return
     try:
         previous = Order.objects.get(pk=instance.pk)
@@ -57,8 +63,8 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
     if previous.status == instance.status:
         return
     if instance.status == Order.Status.COMPLETED and previous.status != Order.Status.COMPLETED:
-        # Кількість балів = total_price * LOYALTY_POINTS_PER_EUR (з settings).
-        # За замовчуванням 1 EUR = 1 бал.
+        # кількість балів = total_price * LOYALTY_POINTS_PER_EUR (з settings).
+        # за замовчуванням 1 EUR = 1 бал.
         points_per_eur = getattr(settings, 'LOYALTY_POINTS_PER_EUR', 1)
         points = int(instance.total_price * points_per_eur)
         if points > 0:
@@ -66,6 +72,9 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
                 user = instance.created_by
                 user.loyalty_points = (user.loyalty_points or 0) + points
                 user.save(update_fields=['loyalty_points'])
+                # ставимо мітку прямо в інстансі - перед збереженням
+                # вона потрапить у БД разом зі статусом COMPLETED
+                instance.loyalty_awarded_at = timezone.now()
                 logger.info(
                     'Нараховано %s балів лояльності користувачу %s за замовлення %s',
                     points, user.pk, instance.order_number,
@@ -79,7 +88,7 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Order)
 def send_order_confirmation_email(sender, instance, created, **kwargs):
-    """Лист-підтвердження клієнту після створення замовлення."""
+    """лист-підтвердження клієнту після створення замовлення."""
     if not created or not instance.contact_email:
         return
     try:

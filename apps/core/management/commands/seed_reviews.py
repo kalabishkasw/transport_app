@@ -1,5 +1,5 @@
 """
-Створює тестові відгуки про завершені рейси.
+створює тестові відгуки про завершені рейси.
 """
 
 import random
@@ -53,7 +53,7 @@ class Command(BaseCommand):
             Review.objects.all().delete()
             self.stdout.write('Існуючі відгуки видалено.')
 
-        # Беремо клієнтів. Якщо їх мало — створимо кілька
+        # беремоо клієнтів. якщо їх мало — створюю кілька
         clients = list(User.objects.filter(role=User.Role.CLIENT))
         if len(clients) < 5:
             clients += self._create_demo_clients()
@@ -73,7 +73,7 @@ class Command(BaseCommand):
         created = 0
         for order in sampled:
             user = random.choice(clients)
-            # Унікальність trip+user
+            # унікальність trip+user
             if Review.objects.filter(trip=order.trip, user=user).exists():
                 continue
             rating, title, comment = self._random_review()
@@ -87,7 +87,7 @@ class Command(BaseCommand):
             )
             created += 1
 
-        # Нараховуємо балів кільком клієнтам, для демо
+        # нараховую бали кільком клієнтам, для демо
         for u in clients:
             u.loyalty_points = random.choice([50, 120, 280, 540, 90, 360])
             u.save(update_fields=['loyalty_points'])

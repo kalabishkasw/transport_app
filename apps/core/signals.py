@@ -16,7 +16,7 @@ from apps.routes.models import Route, Stop, Trip
 from .models import AuditLog
 
 
-# Тримаємо посилання на поточного користувача у потоці
+# тримаю посилання на поточного користувача у потоці
 _thread_locals = threading.local()
 
 
@@ -32,7 +32,7 @@ TRACKED_MODELS = [Customer, Vehicle, Driver, Route, Stop, Trip, Order, Ticket, P
 
 
 def _model_dict(instance):
-    """Повертає простий dict з полів моделі (без ManyToMany та FK об'єктів)."""
+    """повертає простий dict з полів моделі (без ManyToMany та FK об'єктів)."""
     data = {}
     for f in instance._meta.fields:
         try:
@@ -47,7 +47,7 @@ def _model_dict(instance):
 
 @receiver(pre_save)
 def store_old_state(sender, instance, **kwargs):
-    """Запам'ятати старий стан перед збереженням, щоб порахувати diff."""
+    """запам'ятати старий стан перед збереженням, щоб порахувати diff."""
     if sender not in TRACKED_MODELS:
         return
     if not instance.pk:

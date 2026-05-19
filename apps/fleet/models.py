@@ -12,7 +12,7 @@ from django.db import models
 
 class Vehicle(models.Model):
     """
-    Транспортний засіб у автопарку. Основний акцент на пасажирські автобуси
+    транспортний засіб у автопарку. основний акцент на пасажирські автобуси
     та мікроавтобуси, додатково вантажні авто та причепи.
     """
 
@@ -36,7 +36,7 @@ class Vehicle(models.Model):
         BUSINESS = 'business', 'Бізнес'
         LUXURY = 'luxury', 'Люкс'
 
-    # ---- спільні поля ----
+    #спільні поля
     vehicle_type = models.CharField(
         max_length=10,
         choices=VehicleType.choices,
@@ -68,7 +68,7 @@ class Vehicle(models.Model):
     last_inspection_date = models.DateField(blank=True, null=True, verbose_name='Останній техогляд')
     next_inspection_date = models.DateField(blank=True, null=True, verbose_name='Наступний техогляд')
 
-    # ---- характеристики автобуса (заповнюється для bus / minibus / van) ----
+    # характеристики автобуса (заповнюється для bus / minibus / van)
     seats_total = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -94,7 +94,7 @@ class Vehicle(models.Model):
         verbose_name='Об\'єм багажника, м³',
     )
 
-    # ---- характеристики вантажного ТЗ (для truck / trailer) ----
+    #  характеристики вантажного ТЗ (для truck / trailer)
     capacity_tons = models.DecimalField(
         max_digits=6,
         decimal_places=2,
@@ -110,7 +110,7 @@ class Vehicle(models.Model):
         verbose_name='Об\'єм кузова, м³',
     )
 
-    # ---- стан ----
+    #  стан
     is_active = models.BooleanField(default=True, verbose_name='В експлуатації', db_index=True)
     notes = models.TextField(blank=True, verbose_name='Примітки')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
@@ -135,8 +135,8 @@ class Vehicle(models.Model):
 
 class Driver(models.Model):
     """
-    Профіль водія. Прив'язаний до користувача системи з роллю «Водій».
-    Зберігає посвідчення, документи та статуси.
+    профіль водія. прив'язаний до користувача системи з роллю «Водій».
+    зберігає посвідчення, документи та статуси.
     """
 
     user = models.OneToOneField(

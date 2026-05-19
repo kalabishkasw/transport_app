@@ -1,5 +1,5 @@
 """
-Форми публічного кабінету клієнта.
+форми публічного кабінету клієнта
 """
 
 from django import forms
@@ -34,7 +34,7 @@ class ReviewForm(forms.ModelForm):
 
 
 class SearchForm(forms.Form):
-    """Пошук рейсу: звідки, куди, дата."""
+    """пошук рейсу: звідки, куди, дата."""
     origin = forms.CharField(
         label='Звідки',
         max_length=100,
@@ -62,7 +62,7 @@ class SearchForm(forms.Form):
 
 
 class ClientRegisterForm(forms.Form):
-    """Реєстрація клієнта."""
+    """реєстрація клієнта."""
     first_name = forms.CharField(label='Ім\'я', max_length=64)
     last_name = forms.CharField(label='Прізвище', max_length=64)
     email = forms.EmailField(label='Email')
@@ -82,11 +82,11 @@ class ClientRegisterForm(forms.Form):
         return email
 
     def clean_password1(self):
-        # Прокидаємо пароль через стандартні AUTH_PASSWORD_VALIDATORS:
+        # прокидаємо пароль через стандартні AUTH_PASSWORD_VALIDATORS:
         # MinimumLength, CommonPassword, NumericPassword, UserAttributeSimilarity.
         password = self.cleaned_data.get('password1')
         if password:
-            # Створюємо тимчасовий User-обєкт для UserAttributeSimilarityValidator
+            # створюємо тимчасовий User-обєкт для UserAttributeSimilarityValidator
             tmp = User(
                 username=self.cleaned_data.get('email', ''),
                 email=self.cleaned_data.get('email', ''),
@@ -123,7 +123,7 @@ class ClientRegisterForm(forms.Form):
 
 
 class PassengerForm(forms.Form):
-    """Дані одного пасажира."""
+    """дані одного пасажира."""
     last_name = forms.CharField(
         label='Прізвище',
         max_length=64,
@@ -157,9 +157,24 @@ class PassengerForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '—'}),
     )
 
+    def clean_seat_number(self):
+        """перевіряю що номер місця - це число (1-3 цифри).
+        перевірку діапазону відносно конкретного автобуса роблю далі
+        у booking_service, бо тут не знаю trip.vehicle.seats_total."""
+        seat = (self.cleaned_data.get('seat_number') or '').strip()
+        if not seat:
+            return ''
+        if not seat.isdigit():
+            raise forms.ValidationError('Номер місця має бути числом (наприклад 12).')
+        if len(seat) > 3:
+            raise forms.ValidationError('Занадто великий номер місця.')
+        if int(seat) <= 0:
+            raise forms.ValidationError('Номер місця має бути більше нуля.')
+        return seat
+
 
 class BookingContactForm(forms.Form):
-    """Контактні дані замовника."""
+    """контактні дані замовника."""
     last_name = forms.CharField(
         label='Прізвище',
         max_length=64,

@@ -27,7 +27,7 @@ from reportlab.platypus import (
 
 
 def _make_qr_image(data, size_cm=3):
-    """Згенерувати QR-код як ReportLab Image для вбудовування у PDF."""
+    """згенерувати QR-код як ReportLab Image для вбудовування у PDF."""
     qr = qrcode.QRCode(
         version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -45,7 +45,7 @@ def _make_qr_image(data, size_cm=3):
 
 def _get_system_font_paths():
     """
-    Повертає (regular, bold) шляхи до системних шрифтів з підтримкою кирилиці.
+    повертає (regular, bold) шляхи до системних шрифтів з підтримкою кирилиці.
     На Windows використовуємо Arial. На Linux/Mac DejaVu Sans.
     """
     bundled_regular = Path(settings.BASE_DIR) / 'static' / 'fonts' / 'DejaVuSans.ttf'
@@ -66,7 +66,7 @@ _fonts_registered = False
 
 
 def _register_fonts():
-    """Реєстрація шрифту з підтримкою кирилиці у ReportLab."""
+    """реєстрація шрифту з підтримкою кирилиці у ReportLab."""
     global _fonts_registered
     if _fonts_registered:
         return
@@ -88,8 +88,8 @@ COMPANY_TAG = 'Міжнародні пасажирські перевезенн�
 
 def generate_ticket_pdf(ticket):
     """
-    Генерація PDF квитка у вигляді посадкового талона на A4.
-    Гарантовано вміщується на одну сторінку.
+    генерація PDF квитка у вигляді посадкового талона на A4.
+    гарантовано вміщується на одну сторінку.
     """
     _register_fonts()
     buf = BytesIO()
@@ -103,7 +103,7 @@ def generate_ticket_pdf(ticket):
         title=f'Ticket {ticket.ticket_number}',
     )
 
-    # ВАЖЛИВО: leading має бути >= fontSize, інакше у комірках таблиці тексти
+    # тут важливо: leading має бути >= fontSize, інакше у комірках таблиці тексти
     # сусідніх параграфів накладаються один на одного.
     co_title = ParagraphStyle('CoTitle', fontName='DejaVu-Bold', fontSize=18, leading=22, alignment=0, textColor=colors.HexColor('#0369a1'), spaceAfter=4)
     co_sub = ParagraphStyle('CoSub', fontName='DejaVu', fontSize=9, leading=12, alignment=0, textColor=colors.grey)
@@ -120,7 +120,7 @@ def generate_ticket_pdf(ticket):
     trip = ticket.order.trip
     route = trip.route
 
-    # ----- Шапка: лого ліворуч, № квитка праворуч -----
+    # шапка: лого ліворуч, № квитка праворуч
     header_data = [[
         [Paragraph(COMPANY_NAME, co_title), Paragraph(COMPANY_TAG, co_sub)],
         [Paragraph('КВИТОК', title_big), Paragraph(f'№ {ticket.ticket_number}', number_style)],
@@ -133,7 +133,7 @@ def generate_ticket_pdf(ticket):
     elements.append(header)
     elements.append(Spacer(1, 4 * mm))
 
-    # Розділова лінія
+    # розділова лінія
     line = Table([[' ']], colWidths=[17 * cm], rowHeights=[1])
     line.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, 0), 1.5, colors.HexColor('#4f46e5')),
@@ -141,14 +141,14 @@ def generate_ticket_pdf(ticket):
     elements.append(line)
     elements.append(Spacer(1, 6 * mm))
 
-    # ----- Основна частина: інфо ліворуч (12 см), QR праворуч (5 см) -----
+    # основна частина: інфо ліворуч (12 см), QR праворуч (5 см)
     qr_data = f'TICKET:{ticket.ticket_number}|TRIP:{trip.id}|DATE:{trip.departure_at:%Y-%m-%d}'
     qr_img = _make_qr_image(qr_data, size_cm=4.5)
 
     def field_cell(label, value, sub=None):
         """
-        Одна клітинка з лейблом (сірий) над значенням (жирним).
-        Якщо sub задано, додаємо ще третій рядок меншим сірим шрифтом
+        одна клітинка з лейблом (сірий) над значенням (жирним).
+        якщо sub задано, додаємо ще третій рядок меншим сірим шрифтом
         (наприклад, назва автостанції під назвою міста).
         """
         items = [
@@ -159,12 +159,12 @@ def generate_ticket_pdf(ticket):
             items.append(Paragraph(str(sub), cell_value_sub))
         return items
 
-    # Скорочення довгих назв транспорту, щоб не лізли на 3 рядки.
+    # скорочення довгих назв транспорту, щоб не лізли на 3 рядки.
     vehicle_full = f'{trip.vehicle.brand} {trip.vehicle.model}'
     if len(vehicle_full) > 26:
         vehicle_full = f'{trip.vehicle.brand} {trip.vehicle.model[:22]}…'
 
-    # Кожен рядок таблиці = одна пара полів (зліва + справа). Усього 6 рядків.
+    # кожен рядок таблиці = одна пара полів (зліва + спава). усього 6 рядків.
     info_grid_data = [
         [field_cell('Маршрут', route.name),
          field_cell('Код', route.code)],
@@ -186,10 +186,10 @@ def generate_ticket_pdf(ticket):
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        # Збільшені вертикальні відступи, щоб контент не налазив на роздільну лінію
+        # збільшені вертикальні відступи, щоб контент не налазив на роздільну лінію
         ('TOPPADDING', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        # Тонкі розділові лінії між парами
+        # тонкі розділові лінії між парами
         ('LINEBELOW', (0, 0), (-1, -2), 0.3, colors.HexColor('#e2e8f0')),
     ]))
 
@@ -212,7 +212,7 @@ def generate_ticket_pdf(ticket):
 
     elements.append(Spacer(1, 12 * mm))
 
-    # Розділова лінія
+    # розділова лінія
     line2 = Table([[' ']], colWidths=[17 * cm], rowHeights=[1])
     line2.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#cbd5e1')),
@@ -234,7 +234,7 @@ def generate_ticket_pdf(ticket):
 
 def generate_passenger_list_pdf(trip):
     """
-    Генерація посадкового листа: список усіх квитків на рейс.
+    генерація посадкового листа: список усіх квитків на рейс.
     """
     from apps.orders.models import Ticket  # імпорт всередині функції щоб уникнути циклічних залежностей
 
@@ -321,7 +321,7 @@ def generate_passenger_list_pdf(trip):
             Paragraph('', cell_style),
         ])
 
-    # Ширини колонок (сума ~18 см, що поміщається у A4 з полями)
+    # ширини колонок (сума ~18 см, що поміщається у A4 з полями)
     table = Table(data, colWidths=[0.8 * cm, 4.2 * cm, 4.5 * cm, 2.3 * cm, 2.3 * cm, 1.4 * cm, 3 * cm])
     table.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, -1), 'DejaVu', 9),

@@ -1,0 +1,22 @@
+# LF для shell-скриптів щоб працювали на Linux Render
+*.sh text eol=lf
+build.sh text eol=lf
+
+# звичайні текстові файли - авто
+*.py text
+*.html text
+*.css text
+*.js text
+*.md text
+*.txt text
+*.yaml text
+*.yml text
+
+# бінарні файли як є
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.ico binary
+*.eps binary

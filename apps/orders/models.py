@@ -10,7 +10,7 @@ from django.utils import timezone
 
 
 class PromoCode(models.Model):
-    """Промокод зі знижкою у відсотках. Має термін дії та ліміт використань."""
+    """промокод зі знижкою у відсотках. Має термін дії та ліміт використань."""
 
     code = models.CharField(max_length=20, unique=True, verbose_name='Код')
     description = models.CharField(max_length=200, blank=True, verbose_name='Опис')
@@ -51,8 +51,8 @@ class PromoCode(models.Model):
 
 class Order(models.Model):
     """
-    Замовлення (бронювання) на конкретний рейс. Може містити один або декілька
-    квитків (на різних пасажирів). Створюється диспетчером або клієнтом
+    замовлення (бронювання) на конкретний рейс. може містити один або декілька
+    квитків (на різних пасажирів). створюється диспетчером або клієнтом
     через кабінет.
     """
 
@@ -151,6 +151,14 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
+    # мітка коли клієнту нараховано бали за це замовлення.
+    # використовується щоб і сигнал, і middleware не нараховували двічі.
+    loyalty_awarded_at = models.DateTimeField(
+        blank=True, null=True, db_index=True,
+        verbose_name='Бали нараховано',
+        help_text='Дата коли клієнту нараховано бонусні бали за це замовлення.',
+    )
+
     class Meta:
         verbose_name = 'Замовлення'
         verbose_name_plural = 'Замовлення'
@@ -173,7 +181,7 @@ class Order(models.Model):
             super().save(update_fields=['order_number'])
 
     def recalculate_total(self):
-        """Перерахувати загальну суму як сума цін усіх квитків мінус знижка."""
+        """перерахувати загальну суму як сума цін усіх квитків мінус знижка."""
         from decimal import Decimal
         subtotal = sum((t.price for t in self.tickets.all()), start=Decimal('0'))
         discount = Decimal('0')
@@ -190,8 +198,8 @@ class Order(models.Model):
 
 class Ticket(models.Model):
     """
-    Квиток. Один квиток - один пасажир.
-    Належить замовленню і конкретному рейсу. Має місця посадки та висадки.
+    квиток. один квиток - один пасажир.
+    належить замовленню і конкретному рейсу. має місця посадки та висадки.
     """
 
     class DocumentType(models.TextChoices):

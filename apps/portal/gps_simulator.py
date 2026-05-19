@@ -30,14 +30,14 @@ class GpsPosition:
     eta_minutes: int
     is_finished: bool
     minutes_since_departure: int
-    # Прогрес всередині поточного сегмента (від зупинки K до K+1), 0..1.
-    # Потрібен клієнту, щоб точно позиціонувати автобус на OSRM-полілінії
+    # прогрес всередині поточного сегмента (від зупинки K до K+1), 0..1.
+    # потрібен клієнту, щоб точно позиціонувати автобус на OSRM-полілінії
     # саме між цими зупинками, а не за загальним відсотком часу.
     segment_t: float = 0.0
 
 
 def _haversine_km(p1, p2):
-    """Відстань між двома координатами у км (формула гаверсинуса)."""
+    """відстань між двома координатами у км (формула гаверсинуса)."""
     lat1, lon1 = radians(p1[0]), radians(p1[1])
     lat2, lon2 = radians(p2[0]), radians(p2[1])
     dlat = lat2 - lat1
@@ -47,7 +47,7 @@ def _haversine_km(p1, p2):
 
 
 def _interpolate(p1, p2, t: float):
-    """Лінійна інтерполяція між двома точками. t у [0, 1]."""
+    """лінійна інтерполяція між двома точками. t у [0, 1]."""
     return (
         p1[0] + (p2[0] - p1[0]) * t,
         p1[1] + (p2[1] - p1[1]) * t,
@@ -56,9 +56,9 @@ def _interpolate(p1, p2, t: float):
 
 def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
     """
-    Повертає псевдо-GPS позицію автобуса для рейсу.
+    повертає псевдо-GPS позицію автобуса для рейсу.
 
-    Параметри
+    параметри
     ---------
     trip : Trip
         Об'єкт рейсу. Має мати маршрут зі зупинками з координатами.
@@ -66,7 +66,7 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
         Якщо True, рейс програється прискорено (1 хв реального часу = 30 хв
         поїздки). Корисно для демо коли рейс заплановано на майбутнє.
 
-    Повертає
+    повертає
     --------
     GpsPosition або None
         None - коли рейс скасовано або у маршруті < 2 зупинок з координатами.
@@ -87,20 +87,20 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
     total_minutes = max(stops[-1].departure_offset_minutes, duration)
 
     if demo_mode:
-        # Прискорене програвання: 1 секунда реального часу = 10 хвилин поїздки.
-        # Тобто 6-годинна поїздка програється за 36 секунд, 10-годинна за 60 сек.
-        # Цикл повторюється кожні total_minutes/10 секунд.
+        # прискорене програвання: 1 секунда реального часу = 10 хвилин поїздки.
+        # тобто 6-годинна поїздка програється за 36 секунд, 10-годинна за 60 сек.
+        # цикл повторюється кожні total_minutes/10 секунд.
         seconds_now = int(now.timestamp())
         delta = float((seconds_now * 10) % total_minutes)
     else:
         delta = (now - trip.departure_at).total_seconds() / 60.0
 
-    # Рейс ще не почався (тільки у звичайному режимі).
+    # рейс ще не почався (тільки у звичайному режимі).
     if not demo_mode and delta < 0:
         return None
 
     if delta >= total_minutes:
-        # Поїздка завершена.
+        # поїздка завершена.
         last = stops[-1]
         return GpsPosition(
             lat=float(last.latitude),
@@ -115,8 +115,8 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
             minutes_since_departure=int(delta),
         )
 
-    # Загальна довжина маршруту по прямих (для базової швидкості).
-    # Реальна дорожна відстань більша на ~30%, тому коректуємо.
+    # загальна довжина маршруту по прямих (для базової швидкості).
+    # реальна дорожна відстань більша на ~30%, тому коректуємо.
     total_route_km = sum(
         _haversine_km(
             (float(stops[i].latitude), float(stops[i].longitude)),
@@ -124,11 +124,11 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
         )
         for i in range(len(stops) - 1)
     ) * 1.3
-    # Базова крейсерська швидкість автобуса для цього маршруту:
+    # базова крейсерська швидкість автобуса для цього маршруту:
     # довжина у км / тривалість у годинах. Зазвичай 50-70 км/год.
     base_speed = (total_route_km / (total_minutes / 60)) if total_minutes > 0 else 60
 
-    # Знаходимо два сусідні стопи між якими зараз авто.
+    # знаходимо два сусідні стопи між якими зараз авто.
     for i in range(len(stops) - 1):
         s_curr = stops[i]
         s_next = stops[i + 1]
@@ -149,8 +149,8 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
                 t,
             )
 
-            # Реалістичний розрахунок швидкості замість простої "відстань/час".
-            # Беремо базову крейсерську швидкість маршруту і модифікуємо її залежно
+            # реалістичний розрахунок швидості замість простої "відстань/час".
+            # беру базову крейсерську швидкість маршруту і модифікуємо її залежно
             # від ситуації:
             #  - коли під'їжджаємо/від'їжджаємо від зупинки (близько до меж сегмента) -
             #    швидкість падає (гальмування/розгін);
@@ -164,14 +164,14 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
                 (float(s_next.latitude), float(s_next.longitude)),
             ) * 1.3
 
-            # Чи це "повільний" сегмент: короткий (<20км) - типу місто/прикордоння
+            # чи це "повільний" сегмент: короткий (<20км) - типу місто/прикордоння
             is_slow_segment = segment_distance_km < 20
             target_speed = base_speed * (0.6 if is_slow_segment else 1.0)
 
-            # Профіль розгону/гальмування: швидкість максимальна посередині сегмента
+            # профіль розгону/гальмування: швидкість максимальна посередині сегмента
             # і знижується ближче до зупинок. Використовуємо синус для плавності.
             acceleration_factor = sin(t * pi)  # 0 -> 1 -> 0 від t=0 до t=1
-            # Біля зупинки (t<0.05 або t>0.95) швидкість майже нульова.
+            # біля зупинки (t<0.05 або t>0.95) швидкість майже нульова.
             if t < 0.03 or t > 0.97:
                 speed = random.uniform(0, 10)  # стоїть на зупинці
             elif t < 0.1:
@@ -182,7 +182,7 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
                 # Крейсерський режим: ціль ± 15% шуму
                 speed = target_speed * random.uniform(0.85, 1.15)
 
-            # Обмежуємо межі: автобус не їде швидше за 100 км/год і не від'ємно.
+            # обмежуємо межі: автобус не їде швидше за 100 км/год і не від'ємно.
             speed = max(0, min(100, speed))
 
             return GpsPosition(
@@ -199,7 +199,7 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
                 segment_t=round(t, 4),
             )
 
-    # Якщо delta між зупинок не знайдено (не повинно статись), повертаємо першу.
+    # якщо delta між зупинок не знайдено (не повинно статись), повертаємо першу.
     first = stops[0]
     return GpsPosition(
         lat=float(first.latitude),

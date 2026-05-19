@@ -3,16 +3,17 @@ views модуля маршрутів. зараз тут лише route_map - с
 картою конкретного маршруту (список зупинок + leaflet-полілінія через osrm).
 решта операцій з маршрутами - через core/admin.
 """
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
+
+from apps.core.decorators import staff_required
 
 from .models import Route
 
 
-@login_required
+@staff_required
 def route_map(request, route_id):
     """
-    Сторінка з картою маршруту: всі зупинки як маркери,
+    сторінка з картою маршруту: всі зупинки як маркери,
     послідовно з'єднані лінією руху.
     """
     route = get_object_or_404(Route, pk=route_id)

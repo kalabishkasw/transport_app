@@ -7,3 +7,7 @@ class RoutesConfig(AppConfig):
     name = 'apps.routes'
     label = 'routes'
     verbose_name = 'Маршрути та рейси'
+
+    def ready(self):
+        # підвантажую signals.py щоб receiver-и зареєструвались
+        from . import signals  # noqa: F401

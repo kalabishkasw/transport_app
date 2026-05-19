@@ -11,7 +11,7 @@ from django.db import models
 
 class Customer(models.Model):
     """
-    Клієнт компанії: юридична або фізична особа, яка замовляє перевезення.
+    клієнт компанії: юридична або фізична особа, яка замовляє перевезення.
     """
 
     class Country(models.TextChoices):

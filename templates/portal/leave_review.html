@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}Відгук про поїздку | TransAuto Travel{% endblock %}
+{% block title %}{{ T.rv_title }} | TransAuto Travel{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -31,9 +31,9 @@
 <div class="auth-wrapper">
     <div class="auth-card" style="max-width:560px;">
         <a href="{% url 'portal:booking_detail' order.id %}" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left"></i> До замовлення
+            <i class="bi bi-arrow-left"></i> {{ T.rv_back_to_order }}
         </a>
-        <h3 class="mt-2 mb-1">Відгук про поїздку</h3>
+        <h3 class="mt-2 mb-1">{{ T.rv_title }}</h3>
         <div class="text-muted small mb-3">
             {{ order.trip.route.name }} ({{ order.trip.departure_at|date:"d.m.Y" }})
         </div>
@@ -41,37 +41,37 @@
         {% if existing %}
         <div class="alert alert-info border-0 small">
             <i class="bi bi-info-circle"></i>
-            Ви вже залишили відгук. Ви можете його оновити нижче.
+            {{ T.rv_existing_note }}
         </div>
         {% endif %}
 
         <form method="post">
             {% csrf_token %}
 
-            <label class="form-label small text-muted">Ваша оцінка</label>
+            <label class="form-label small text-muted">{{ T.rv_rating_label }}</label>
             <div class="star-rating mb-4">
                 {% for i in "54321" %}
                     <input type="radio" name="rating" id="star{{ i }}" value="{{ i }}"
                            {% if existing and existing.rating|stringformat:"s" == i %}checked{% endif %}
                            {% if not existing and i == "5" %}checked{% endif %}>
-                    <label for="star{{ i }}" title="{{ i }} зірок">★</label>
+                    <label for="star{{ i }}" title="{{ i }} {{ T.rv_stars_word }}">★</label>
                 {% endfor %}
             </div>
 
             <div class="mb-3">
-                <label class="form-label small text-muted">Заголовок (за бажанням)</label>
+                <label class="form-label small text-muted">{{ T.rv_title_label }}</label>
                 {{ form.title }}
                 {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors.0 }}</div>{% endif %}
             </div>
 
             <div class="mb-3">
-                <label class="form-label small text-muted">Коментар</label>
+                <label class="form-label small text-muted">{{ T.rv_comment_label }}</label>
                 {{ form.comment }}
                 {% if form.comment.errors %}<div class="text-danger small">{{ form.comment.errors.0 }}</div>{% endif %}
             </div>
 
             <button type="submit" class="btn btn-primary btn-lg w-100">
-                <i class="bi bi-send"></i> Надіслати відгук
+                <i class="bi bi-send"></i> {{ T.rv_submit_btn }}
             </button>
         </form>
     </div>

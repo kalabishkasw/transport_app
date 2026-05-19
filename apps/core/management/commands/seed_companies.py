@@ -1,8 +1,8 @@
 """
-Створює корпоративних клієнтів-юридичних осіб і прив'язує до них
+створює корпоративних клієнтів-юридичних осіб і прив'язує до них
 частину існуючих замовлень для гарної демонстрації.
 
-Запуск:
+запуск:
     python manage.py seed_companies
 """
 
@@ -102,7 +102,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'Компаній додано/оновлено: {len(customers)} (нових {created})'))
 
-        # Прив'язуємо випадкові 600 замовлень до компаній
+        # прив'язую випадкові 600 замовлень до компаній
         unassigned = Order.objects.filter(customer__isnull=True).order_by('?')[:600]
         unassigned_ids = list(unassigned.values_list('id', flat=True))
         linked = 0

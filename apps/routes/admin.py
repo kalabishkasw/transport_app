@@ -14,7 +14,7 @@ from .models import Route, Stop, Trip
 
 class StopInline(admin.TabularInline):
     """
-    Інлайн для редагування зупинок прямо на сторінці маршруту.
+    інлайн для редагування зупинок прямо на сторінці маршруту.
     """
     model = Stop
     extra = 1

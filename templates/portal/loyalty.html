@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}Бонусна програма | TransAuto Travel{% endblock %}
+{% block title %}{{ T.lp_title }} | TransAuto Travel{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -48,10 +48,10 @@
 <section class="section-sm">
 <div class="container">
     <a href="{% url 'portal:account' %}" class="text-muted text-decoration-none small">
-        <i class="bi bi-arrow-left"></i> До кабінету
+        <i class="bi bi-arrow-left"></i> {{ T.lp_back }}
     </a>
-    <h2 class="mt-2 mb-1">Бонусна програма</h2>
-    <p class="text-muted">За кожну завершену поїздку нараховуються бали. 1 бал = 1 EUR знижки.</p>
+    <h2 class="mt-2 mb-1">{{ T.lp_title }}</h2>
+    <p class="text-muted">{{ T.lp_subtitle }}</p>
 
     <div class="row g-3 mt-2">
         <div class="col-lg-7">
@@ -59,24 +59,24 @@
                 <div class="d-flex justify-content-between align-items-start" style="position:relative;">
                     <div>
                         <div style="opacity:0.85; font-size:13px; letter-spacing:1px; text-transform:uppercase;">
-                            Доступно балів
+                            {{ T.lp_available }}
                         </div>
                         <div class="loyalty-points-big">{{ user.loyalty_points }}</div>
                         <div style="opacity:0.85; margin-top:4px;">
-                            На суму <b>{{ user.loyalty_points }} EUR</b>
+                            {{ T.lp_for_sum }} <b>{{ user.loyalty_points }} EUR</b>
                         </div>
                     </div>
                     <span class="level-badge"
                           style="background: rgba(255,255,255,0.18);">
-                        <i class="bi bi-stars"></i> {{ user.loyalty_level }} рівень
+                        <i class="bi bi-stars"></i> {{ user.loyalty_level }} {{ T.lp_level_word }}
                     </span>
                 </div>
 
                 {% if next_level %}
                 <div class="mt-4" style="position:relative;">
                     <div class="d-flex justify-content-between small mb-2">
-                        <span>До рівня <b>{{ next_level.0 }}</b></span>
-                        <span><b>{{ next_level.1 }}</b> балів</span>
+                        <span>{{ T.lp_to_level }} <b>{{ next_level.0 }}</b></span>
+                        <span><b>{{ next_level.1 }}</b> {{ T.lp_pts_word }}</span>
                     </div>
                     <div class="progress-loyal">
                         <div style="width: {{ progress }}%;"></div>
@@ -84,7 +84,7 @@
                 </div>
                 {% else %}
                 <div class="mt-4 small" style="position:relative;">
-                    <i class="bi bi-trophy"></i> Ви досягли максимального рівня!
+                    <i class="bi bi-trophy"></i> {{ T.lp_max_reached }}
                 </div>
                 {% endif %}
             </div>
@@ -92,37 +92,36 @@
 
         <div class="col-lg-5">
             <div class="card p-4 h-100">
-                <h5 class="mb-3">Рівні програми</h5>
+                <h5 class="mb-3">{{ T.lp_levels_title }}</h5>
                 <div class="level-row">
                     {% for name, threshold in levels %}
                     <div class="level-step {% if user.loyalty_points >= threshold %}active{% endif %}">
                         <div class="lvl-name">{{ name }}</div>
-                        <div class="lvl-thr">від {{ threshold }} балів</div>
+                        <div class="lvl-thr">{{ T.lp_from_threshold }} {{ threshold }} {{ T.lp_pts_word }}</div>
                     </div>
                     {% endfor %}
                 </div>
                 <hr>
                 <div class="small text-muted">
                     <i class="bi bi-info-circle"></i>
-                    Бали нараховуються після завершення рейсу.
-                    Використовуйте їх при оформленні нового замовлення для зниження ціни до 50%.
+                    {{ T.lp_levels_info }}
                 </div>
             </div>
         </div>
     </div>
 
     <div class="card mt-4">
-        <div class="card-header"><i class="bi bi-clock-history"></i> Історія завершених поїздок (останні 20)</div>
+        <div class="card-header"><i class="bi bi-clock-history"></i> {{ T.lp_history_title }}</div>
         {% if completed_orders %}
         <div class="table-responsive">
             <table class="table mb-0">
                 <thead>
                     <tr>
-                        <th>Маршрут</th>
-                        <th>Дата</th>
-                        <th>Замовлення</th>
-                        <th class="text-end">Сума</th>
-                        <th class="text-end">Нараховано балів</th>
+                        <th>{{ T.lp_th_route }}</th>
+                        <th>{{ T.lp_th_date }}</th>
+                        <th>{{ T.lp_th_order }}</th>
+                        <th class="text-end">{{ T.lp_th_amount }}</th>
+                        <th class="text-end">{{ T.lp_th_awarded }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -141,7 +140,7 @@
         {% else %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-trophy" style="font-size:48px; opacity:0.3;"></i>
-            <p class="mt-3">Завершених поїздок ще немає. Бали з'являться після першого рейсу.</p>
+            <p class="mt-3">{{ T.lp_no_trips }}</p>
         </div>
         {% endif %}
     </div>

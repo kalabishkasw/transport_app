@@ -27,9 +27,9 @@ from .models import AuditLog
 PAGE_SIZE = 20
 
 
-# ----------------------------------------------------------------------
-# Дашборд
-# ----------------------------------------------------------------------
+
+# дашборд
+
 
 @staff_required
 def dashboard(request):
@@ -48,8 +48,8 @@ def dashboard(request):
         departure_at__gte=today_start,
         departure_at__lt=today_start + timedelta(days=1),
     ).count()
-    # Унікальні авто, задіяні у сьогоднішніх рейсах. Може бути менше за trips_active_today,
-    # бо одне авто може робити 2-3 рейси на день. Використовується для розрахунку
+    # унікальні авто, задіяні у сьогоднішніх рейсах. може бути менше за trips_active_today,
+    # бо одне авто може робити 2-3 рейси на день. використовується для розрахунку
     # відсотка завантаженості автопарку (а не трип-навантаження).
     vehicles_in_use_today = (
         Trip.objects
@@ -62,14 +62,14 @@ def dashboard(request):
         .count()
     )
 
-    # Квитки на рейси цього місяця (більш предметна метрика для бізнесу)
+    # квитки на рейси цього місяця (більш предметна метрика для бізнесу)
     tickets_this_month = Ticket.objects.filter(
         order__trip__departure_at__gte=month_start,
         order__trip__departure_at__lt=next_month_start,
         status__in=['booked', 'paid', 'used'],
     ).count()
 
-    # Виручка з рейсів цього місяця
+    # виручка з рейсів цього місяця
     revenue_this_month = Order.objects.filter(
         trip__departure_at__gte=month_start,
         trip__departure_at__lt=next_month_start,
@@ -99,11 +99,11 @@ def dashboard(request):
         .order_by('-created_at')[:8]
     )
 
-    # ----- Дані для графіків -----
+    # дані для графіків
 
-    # Виручка по днях: останні 30 днів (актуал) + наступні 60 днів (прогноз).
-    # ВАЖЛИВО: і фактична, і прогнозна частини рахуються за ОДНАКОВОЮ метрикою -
-    # за датою відправлення рейсу. Це гарантує плавний перехід через "Сьогодні"
+    # виручка по днях: останні 30 днів (актуал) + наступні 60 днів (прогноз).
+    # тут важливво: і фактична, і прогнозна частини рахуються за однаковою метрикою -
+    # за датою відправлення рейсу. це гарантує плавний перехід через "Сьогодні"
     # без штучного провалу.
     period_start = (now - timedelta(days=29)).replace(hour=0, minute=0, second=0, microsecond=0)
     forecast_end = period_start + timedelta(days=90)
@@ -122,7 +122,7 @@ def dashboard(request):
     )
     revenue_map = {r['day'].isoformat(): float(r['total'] or 0) for r in revenue_by_day}
 
-    # Будуємо ряд по 90 днях. Точка "Сьогодні" розділяє факт і прогноз
+    # будуємо ряд по 90 днях. точка "Сьогодні" розділяє факт і прогноз
     # тільки візуально (пунктирна лінія у frontend), але метрика одна.
     combined_raw = []
     labels = []
@@ -160,8 +160,8 @@ def dashboard(request):
     # today_index використовуємо у frontend для відображення вертикальної лінії "сьогодні"
     chart_today_index = today_index if today_index is not None else 30
 
-    # Розподіл рейсів за статусом (усі рейси, не лише найближчі).
-    # Передаємо також `key` (англ. ключ статусу), щоб JS міг призначати
+    # розподіл рейсів за статусом (усі рейси, не лише найближчі).
+    # передаємо також `key` (англ. ключ статусу), щоб JS міг призначати
     # кольори за змістом, а не за порядком: cancelled - червоний, completed - зелений тощо.
     status_qs = (
         Trip.objects
@@ -179,8 +179,8 @@ def dashboard(request):
         for s in status_qs
     ]
 
-    # Топ-5 найпопулярніших маршрутів (за кількістю проданих квитків).
-    # Найважчий запит дашборда (joins по 4 таблицях). Кешуємо на 5 хвилин.
+    # топ-5 найпопулярніших маршрутів (за кількістю проданих квитків).
+    # найважчий запит дашборда (joins по 4 таблицях). Кешуємо на 5 хвилин.
     chart_top_routes = cache.get('dashboard_top_routes_v1')
     if chart_top_routes is None:
         top_routes_qs = (
@@ -220,9 +220,9 @@ def dashboard(request):
     })
 
 
-# ----------------------------------------------------------------------
-# Рейси
-# ----------------------------------------------------------------------
+
+# рейси
+
 
 @staff_required
 def trips_list(request):
@@ -252,7 +252,7 @@ def trips_list(request):
             Q(vehicle__registration_number__icontains=search)
         )
 
-    # Швидкі фільтри по періоду
+    # швидкі фільтри по періоду
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == 'today':
@@ -312,9 +312,9 @@ def trip_detail(request, trip_id):
     })
 
 
-# ----------------------------------------------------------------------
-# Замовлення
-# ----------------------------------------------------------------------
+
+# замовлення
+
 
 @staff_required
 def orders_list(request):
@@ -382,9 +382,9 @@ def order_detail(request, order_id):
     })
 
 
-# ----------------------------------------------------------------------
-# Клієнти
-# ----------------------------------------------------------------------
+
+# клієнти
+
 
 @staff_required
 def customer_detail(request, customer_id):
@@ -438,9 +438,9 @@ def customers_list(request):
     })
 
 
-# ----------------------------------------------------------------------
-# Автопарк
-# ----------------------------------------------------------------------
+
+# автопарк
+
 
 @staff_required
 def vehicles_list(request):
@@ -469,9 +469,9 @@ def vehicles_list(request):
     })
 
 
-# ----------------------------------------------------------------------
-# Водії
-# ----------------------------------------------------------------------
+
+# водії
+
 
 @staff_required
 def drivers_list(request):
@@ -499,13 +499,13 @@ def drivers_list(request):
     })
 
 
-# ----------------------------------------------------------------------
-# Маршрути
-# ----------------------------------------------------------------------
 
-# ----------------------------------------------------------------------
-# Календар рейсів
-# ----------------------------------------------------------------------
+# маршрути
+
+
+
+# календар рейсів
+
 
 STATUS_COLORS = {
     'planned': '#94a3b8',
@@ -549,9 +549,9 @@ def trips_calendar_feed(request):
     return JsonResponse(events, safe=False)
 
 
-# ----------------------------------------------------------------------
-# Експорт в Excel
-# ----------------------------------------------------------------------
+
+# експорт в Excel
+
 
 def _excel_response(filename):
     response = HttpResponse(
@@ -559,6 +559,21 @@ def _excel_response(filename):
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+# символи з яких починається XLSX-формула. якщо у текстовому полі
+# зберегти "=cmd|'/c calc'!A1", Excel виконає це при відкритті файла.
+# тому усі вхідні рядки що починаються з цих символів префіксуємо
+# апострофом - Excel сприймає такий рядок як звичайний текст.
+_XLSX_INJECT_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def _safe(value):
+    """захист від xlsx-injection. застосовую до всіх рядкових значень
+    які можуть прийти з користувацького вводу (імена, телефони, нотатки)."""
+    if isinstance(value, str) and value and value[0] in _XLSX_INJECT_PREFIXES:
+        return "'" + value
+    return value
 
 
 @staff_required
@@ -592,13 +607,13 @@ def orders_export(request):
     )
     for o in qs:
         ws.append([
-            o.order_number,
+            _safe(o.order_number),
             o.created_at.replace(tzinfo=None),
-            o.trip.route.code if o.trip else '',
+            _safe(o.trip.route.code if o.trip else ''),
             o.trip.departure_at.replace(tzinfo=None) if o.trip else None,
-            f'{o.contact_last_name} {o.contact_first_name}',
-            o.contact_phone,
-            o.customer.name if o.customer else '',
+            _safe(f'{o.contact_last_name} {o.contact_first_name}'),
+            _safe(o.contact_phone),
+            _safe(o.customer.name if o.customer else ''),
             o.tickets_total,
             float(o.total_price),
             float(o.discount_amount),
@@ -651,11 +666,11 @@ def trips_export(request):
         if t.main_driver_id:
             driver_name = f'{t.main_driver.user.last_name} {t.main_driver.user.first_name}'
         ws.append([
-            t.route.code,
-            t.route.name,
+            _safe(t.route.code),
+            _safe(t.route.name),
             t.departure_at.replace(tzinfo=None),
-            f'{t.vehicle.brand} {t.vehicle.model} ({t.vehicle.registration_number})',
-            driver_name,
+            _safe(f'{t.vehicle.brand} {t.vehicle.model} ({t.vehicle.registration_number})'),
+            _safe(driver_name),
             t.vehicle.seats_total or 0,
             t.sold,
             float(t.base_price),
@@ -672,9 +687,9 @@ def trips_export(request):
     return response
 
 
-# ----------------------------------------------------------------------
-# Сповіщення (для bell-індикатора у топбарі)
-# ----------------------------------------------------------------------
+
+# сповіщення (для bell-індикатора у топбарі)
+
 
 @staff_required
 def audit_log(request):

@@ -1,8 +1,8 @@
 """
-Налаштування Django-проекту для веб-застосунку міжнародної транспортної компанії.
+налаштування Django-проекту для веб-застосунку міжнародної транспортної компанії.
 
-Чутливі параметри читаються з .env файлу (див. .env.example).
-Для production обовязково встановіть DEBUG=False, ALLOWED_HOSTS, SECRET_KEY.
+чутливі параметри читаються з .env файлу (див. .env.example).
+для production DEBUG=False, ALLOWED_HOSTS, SECRET_KEY.
 """
 
 import os
@@ -13,35 +13,35 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Завантаження змінних з .env
+# завантаження змінних з .env
 load_dotenv(BASE_DIR / '.env')
 
 
 def env_bool(name, default=False):
-    """Прочитати булеву змінну з .env."""
+    """прочитати булеву змінну з .env."""
     return os.getenv(name, str(default)).lower() in ('1', 'true', 'yes', 'on')
 
 
-# ----------------------- Безпека -----------------------
+# безпека
 
 DEBUG = env_bool('DEBUG', True)
 
 SECRET_KEY = os.getenv('SECRET_KEY', '')
 if not SECRET_KEY:
     if DEBUG:
-        # Безпечний дефолт ТІЛЬКИ для розробки
+        # безпечний дефолт ТІЛЬКИ для розробки
         SECRET_KEY = 'unsafe-dev-only-{}'.format(os.urandom(16).hex())
     else:
         raise ImproperlyConfigured(
             'SECRET_KEY не задано. Встановіть його у .env перед запуском у production.'
         )
 
-# ALLOWED_HOSTS читаємо з env через кому: "example.com,www.example.com"
+# ALLOWED_HOSTS читаю з env через кому: "example.com,www.example.com"
 # для Render підтримуємо ".onrender.com" як wildcard
 _default_hosts = 'localhost,127.0.0.1,0.0.0.0'
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', _default_hosts).split(',') if h.strip()]
 
-# на Render додаємо власне ім'я сервісу до ALLOWED_HOSTS (передається у env RENDER_EXTERNAL_HOSTNAME)
+# на Render додав власне ім'я сервісу до ALLOWED_HOSTS (передається у env RENDER_EXTERNAL_HOSTNAME)
 RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
@@ -60,7 +60,7 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
-# ----------------------- Застосунки -----------------------
+# застосунки
 
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -93,7 +93,7 @@ AUTH_USER_MODEL = 'accounts.User'
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 
-# ----------------------- Middleware -----------------------
+# Middleware
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -131,7 +131,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# ----------------------- База даних -----------------------
+#  База даних
 # у production Render передає DATABASE_URL з підключеної postgres-бази.
 # локально читаємо окремі параметри з .env (DATABASE_NAME, _USER тощо).
 
@@ -155,9 +155,8 @@ else:
     }
 
 
-# ----------------------- Кеш -----------------------
-# Локальний LocMemCache - кожен процес тримає окремий кеш. Цього достатньо
-# для розробки. У production з кількома gunicorn-воркерами краще Redis,
+#  Кеш
+# У production з кількома gunicorn-воркерами краще Redis,
 # щоб middleware-локи (AutoUpdateTripStatusMiddleware) працювали глобально.
 CACHES = {
     'default': {
@@ -170,7 +169,7 @@ CACHES = {
 }
 
 
-# ----------------------- Валідація паролів -----------------------
+# Валідація паролів
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -181,7 +180,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# ----------------------- Локалізація -----------------------
+#  Локалізація
 
 LANGUAGE_CODE = 'uk'
 TIME_ZONE = 'Europe/Kyiv'
@@ -189,7 +188,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-# ----------------------- Статика та медіа -----------------------
+#  Статика та медіа
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
@@ -212,7 +211,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# ----------------------- Інше -----------------------
+#  Інше
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -221,8 +220,8 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
 
-# ----------------------- Email -----------------------
-# Бекенд читається з env. У розробці типово 'console' (листи у термінал),
+#  Email
+# бекенд читається з env. У розробці типово 'console' (листи у термінал),
 # у production - 'smtp' з реальними реквізитами.
 
 EMAIL_BACKEND = os.getenv(
@@ -241,7 +240,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@transauto.travel')
 
 
-# ----------------------- Бізнес-константи: бонусна програма -----------------------
+#  Бізнес-константи: бонусна програма
 # 1 EUR суми завершеного замовлення = 1 бал лояльності.
 # Бали можна списати при оплаті, але не більше LOYALTY_MAX_REDEEM_RATIO * total_price.
 
@@ -258,7 +257,7 @@ LOYALTY_LEVELS = [
 ]
 
 
-# ----------------------- Logging -----------------------
+#  Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

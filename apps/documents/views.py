@@ -33,7 +33,7 @@ def _user_can_view_ticket(user, ticket):
 
 @login_required
 def ticket_pdf(request, ticket_id):
-    """Завантажити PDF квитка. Тільки власник або працівник."""
+    """завантажити PDF квитка. тільки власник або працівник."""
     ticket = get_object_or_404(
         Ticket.objects.select_related('order', 'order__trip__route', 'order__trip__vehicle'),
         pk=ticket_id,
@@ -49,8 +49,8 @@ def ticket_pdf(request, ticket_id):
 @login_required
 def passenger_list_pdf(request, trip_id):
     """
-    Завантажити PDF посадкового листа.
-    Це службовий документ, доступний лише диспетчеру/адміну/водієві.
+    завантажити PDF посадкового листа.
+    це службовий документ, доступний лише диспетчеру/адміну/водієві.
     """
     user = request.user
     if not (user.is_staff or getattr(user, 'role', None) in ('admin', 'dispatcher', 'driver')):

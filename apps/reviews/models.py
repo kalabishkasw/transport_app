@@ -9,7 +9,7 @@ from django.db import models
 
 
 class Review(models.Model):
-    """Відгук клієнта про конкретний рейс."""
+    """відгук клієнта про конкретний рейс."""
 
     trip = models.ForeignKey(
         'routes.Trip',

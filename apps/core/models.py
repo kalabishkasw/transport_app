@@ -9,8 +9,8 @@ from django.db import models
 
 class AuditLog(models.Model):
     """
-    Журнал змін у ключових моделях системи.
-    Заповнюється сигналами при post_save та post_delete.
+    журнал змін у ключових моделях системи.
+    заповнюється сигналами при post_save та post_delete.
     """
 
     class Action(models.TextChoices):

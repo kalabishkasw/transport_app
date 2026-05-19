@@ -9,9 +9,9 @@ from django.db import models
 
 class Route(models.Model):
     """
-    Маршрут пасажирського перевезення (наприклад, «Ужгород Прага»).
-    Описує географію: кінцеві пункти, дистанцію, тривалість.
-    Конкретні рейси з датами та автобусами зберігаються в моделі Trip.
+    маршрут пасажирського перевезення (наприклад, «Ужгород Прага»).
+    описує географію: кінцеві пункти, дистанцію, тривалість.
+    конкретні рейси з датами та автобусами зберігаються в моделі Trip.
     """
 
     code = models.CharField(
@@ -57,8 +57,8 @@ class Route(models.Model):
 
 class Stop(models.Model):
     """
-    Зупинка на маршруті. Маршрут має послідовність зупинок з визначеним порядком.
-    Зупинки бувають з посадкою (можна сісти), з висадкою (можна вийти) або обидва.
+    зупинка на маршруті. Маршрут має послідовність зупинок з визначеним порядком.
+    зупинки бувають з посадкою (можна сісти), з висадкою (можна вийти) або обидва.
     """
 
     route = models.ForeignKey(
@@ -116,8 +116,8 @@ class Stop(models.Model):
 
 class Trip(models.Model):
     """
-    Конкретний рейс на певну дату: маршрут + автобус + водій + час відправлення.
-    Саме на Trip продаються квитки та закріплюється бронювання.
+    конкретний рейс на певну дату: маршрут + автобус + водій + час відправлення.
+    саме на Trip продаються квитки та закріплюється бронювання.
     """
 
     class Status(models.TextChoices):
@@ -215,9 +215,14 @@ class Trip(models.Model):
 
     @property
     def sold_tickets_count(self):
-        # Заглушка, поки немає модуля orders/tickets
-        return 0
+        """кількість квитків що рахуються як зайняті місця у рейсі"""
+        # імпортую локально щоб уникнути циклічної залежності routes <-> orders
+        from apps.orders.models import Ticket
+        return Ticket.objects.filter(
+            order__trip=self,
+            status__in=['booked', 'paid', 'used'],
+        ).count()
 
     @property
     def available_seats(self):
-        return self.total_seats - self.sold_tickets_count
+        return max(0, self.total_seats - self.sold_tickets_count)

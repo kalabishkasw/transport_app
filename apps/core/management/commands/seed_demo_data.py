@@ -1,11 +1,11 @@
 """
-Команда для генерації реалістичних демо-даних:
+команда для генерації реалістичних демо-даних:
 водії, автобуси, маршрути зі зупинками, рейси, промокоди.
 
-Запуск:
+запуск:
     python manage.py seed_demo_data
 
-Опції:
+опції:
     --reset  Видалити існуючі демо-дані перед створенням нових.
 """
 
@@ -26,9 +26,9 @@ from apps.routes.models import Route, Stop, Trip
 User = get_user_model()
 
 
-# ----------------------------------------------------------------------
-# Дані: водії
-# ----------------------------------------------------------------------
+
+# дані: водії
+
 
 DRIVERS = [
     {
@@ -94,9 +94,9 @@ DRIVERS = [
 ]
 
 
-# ----------------------------------------------------------------------
-# Дані: автобуси та мікроавтобуси
-# ----------------------------------------------------------------------
+
+# дані: автобуси та мікроавтобуси
+
 
 VEHICLES = [
     {
@@ -162,10 +162,10 @@ VEHICLES = [
 ]
 
 
-# ----------------------------------------------------------------------
-# Дані: маршрути та зупинки
-# Координати реальних автостанцій / центрів міст (lat, lng).
-# ----------------------------------------------------------------------
+
+# дані: маршрути та зупинки
+# координати реальних автостанцій / центрів міст (lat, lng).
+
 
 CITIES = {
     'Київ':            ('UA', 50.4501, 30.5234, 'Автостанція "Південна"'),
@@ -217,9 +217,9 @@ def stop_data(city, order, arrival_offset, departure_offset, can_board=True, can
     }
 
 
-# Кожен маршрут: (код, назва, відстань, тривалість_хв, базова_ціна_EUR, [зупинки...])
+# кожен маршрут: (код, назва, відстань, тривалість_хв, базова_ціна_EUR, [зупинки...])
 ROUTES = [
-    # Існуючий буде оновлений
+    # існуючий буде оновлений
     ('UA-CZ-001', 'Ужгород - Прага', 1080, 1080, 80, [
         stop_data('Ужгород', 1, 0, 10),
         stop_data('Кошице', 2, 90, 105),
@@ -362,7 +362,7 @@ class Command(BaseCommand):
         from django.conf import settings
 
         if options['reset']:
-            # Захист від випадкового запуску у production: --reset знесе УСІ дані.
+            # захист від випадкового запуску у production: --reset знесе усі дані.
             if not settings.DEBUG and not options['yes_i_am_sure']:
                 self.stdout.write(self.style.ERROR(
                     'ВІДМОВА: --reset у production-режимі (DEBUG=False) видалить '
@@ -387,23 +387,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('Спершу створи суперюзера: python manage.py createsuperuser'))
             return
 
-        # ----- Водії -----
+        # водії
         drivers = self._create_drivers()
         self.stdout.write(self.style.SUCCESS(f'Водіїв створено: {len(drivers)}'))
 
-        # ----- Автобуси -----
+        # автобуси
         vehicles = self._create_vehicles()
         self.stdout.write(self.style.SUCCESS(f'Транспортних засобів створено: {len(vehicles)}'))
 
-        # ----- Маршрути -----
+        # маршрути
         routes = self._create_routes()
         self.stdout.write(self.style.SUCCESS(f'Маршрутів створено: {len(routes)}'))
 
-        # ----- Промокоди -----
+        #промокоди
         self._create_promos()
         self.stdout.write(self.style.SUCCESS(f'Промокодів створено: {len(PROMOS)}'))
 
-        # ----- Рейси -----
+        # рейси
         buses = [v for v in vehicles if v.is_passenger]
         trips_count = self._create_trips(routes, buses, drivers)
         self.stdout.write(self.style.SUCCESS(f'Рейсів створено: {trips_count}'))
@@ -411,7 +411,7 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Демо-дані успішно створено.'))
 
-    # ------------------------------------------------------------------
+
 
     def _create_drivers(self):
         drivers = []
@@ -504,7 +504,7 @@ class Command(BaseCommand):
                     'is_active': True,
                 },
             )
-            # Перестворимо зупинки
+            # перестворюю зупинки
             route.stops.all().delete()
             for s in stops:
                 Stop.objects.create(
@@ -552,11 +552,11 @@ class Command(BaseCommand):
 
         bus_drivers = [d for d in drivers if d.can_drive_bus]
 
-        # Період: 01.01.2026 — 31.08.2026
+        # період: 01.01.2026 — 31.08.2026
         start = datetime(2026, 1, 1, tzinfo=timezone.get_current_timezone())
         end = datetime(2026, 8, 31, tzinfo=timezone.get_current_timezone())
 
-        # Частота рейсів на тиждень для кожного маршруту (за порядком у ROUTES)
+        # частота рейсів на тиждень для кожного маршруту (за порядком у ROUTES)
         weekly_frequency = {
             'UA-CZ-001': 3,   # Ужгород-Прага: 3 на тиждень
             'UA-PL-001': 4,   # Київ-Варшава: 4 на тиждень
@@ -577,7 +577,7 @@ class Command(BaseCommand):
             'UA-HU-002': 2,   # Чернівці-Будапешт: 2 на тиждень
         }
 
-        # Дні тижня для кожної частоти (0=пн, 6=нд)
+        # дні тижня для кожної частоти (0=пн, 6=нд)
         weekday_schedule = {
             1: [4],
             2: [1, 4],
@@ -586,7 +586,7 @@ class Command(BaseCommand):
             5: [0, 2, 4, 5, 6],
         }
 
-        # Можливі години відправлення
+        # можливі години відправлення
         morning_hours = [6, 7, 8, 9]
         evening_hours = [18, 19, 20, 21, 22]
 
@@ -597,7 +597,7 @@ class Command(BaseCommand):
             current = start
             while current <= end:
                 if current.weekday() in schedule_days:
-                    # Більшість рейсів вранці, частина ввечері
+                    # більшість рейсів вранці, частина ввечері
                     hour = random.choice(
                         morning_hours if random.random() < 0.6 else evening_hours
                     )
@@ -614,7 +614,7 @@ class Command(BaseCommand):
                         if pool:
                             co_driver = random.choice(pool)
 
-                    # Статус залежить від часу
+                    # статус залежить від часу
                     if departure < now - timedelta(days=2):
                         status = random.choices(
                             ['completed', 'cancelled'],
@@ -631,7 +631,7 @@ class Command(BaseCommand):
                             weights=[80, 20],
                         )[0]
 
-                    # Сезонність: літо дорожче, січень-лютий дешевше
+                    # сезонність: літо дорожче, січень-лютий дешевше
                     season_mod = {
                         1: -8, 2: -8, 3: -3, 4: 0, 5: 5,
                         6: 10, 7: 12, 8: 12,

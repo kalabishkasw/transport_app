@@ -1,5 +1,5 @@
 """
-Кореневий URL-маршрутизатор проекту.
+кореневий URL-маршрутизатор проекту.
 - /admin/  - стандартна Django admin для CRUD
 - /docs/   - PDF-документи (квиток, посадковий лист)
 - /manage/ - диспетчерська панель (apps.core)
@@ -21,9 +21,9 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    # Медіа-файли (завантажені користувачами): фото авто, аватари тощо.
+    # медіа-файли (завантажені користувачами): фото авто, аватари тощо.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    # Статика: офіційний хелпер Django, який роздає файли з усіх STATICFILES_DIRS
+    # статика: офіційний хелпер Django, який роздає файли з усіх STATICFILES_DIRS
     # та з app/static/ підпапок усіх застосунків. Працює тільки у DEBUG-режимі,
     # тож перед deploy у продакшн запускайте collectstatic.
     urlpatterns += staticfiles_urlpatterns()

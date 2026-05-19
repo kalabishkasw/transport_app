@@ -15,7 +15,7 @@ from .models import Driver, Vehicle
 
 
 def _expiry_badge(d):
-    """Кольоровий бейдж терміну дії документа."""
+    """кольоровий бейдж терміну дії документа."""
     if not d:
         return format_html('<span style="color:#94a3b8;">не вказано</span>')
     days = (d - date.today()).days

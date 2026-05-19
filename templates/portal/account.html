@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}Мій кабінет | TransAuto Travel{% endblock %}
+{% block title %}{{ T.nav_account }} | TransAuto Travel{% endblock %}
 
 {% block content %}
 
@@ -36,8 +36,8 @@
                      style="background:linear-gradient(135deg,#075985,#0891b2); color:#fff;">
                     <i class="bi bi-stars"></i>
                     <div>
-                        <div class="small" style="opacity:0.9;">{{ user.loyalty_level }} рівень</div>
-                        <div class="fw-bold">{{ user.loyalty_points }} балів</div>
+                        <div class="small" style="opacity:0.9;">{{ user.loyalty_level }} {{ T.account_level }}</div>
+                        <div class="fw-bold">{{ user.loyalty_points }} {{ T.account_points }}</div>
                     </div>
                 </div>
             </a>
@@ -48,7 +48,7 @@
 <section class="section-sm">
 <div class="container">
 
-    <h4 class="mb-3"><i class="bi bi-calendar-event text-primary"></i> Майбутні поїздки ({{ upcoming|length }})</h4>
+    <h4 class="mb-3"><i class="bi bi-calendar-event text-primary"></i> {{ T.account_upcoming_section }} ({{ upcoming|length }})</h4>
     {% if upcoming %}
         <div class="row g-3 mb-4">
             {% for o in upcoming %}
@@ -70,14 +70,14 @@
                             <div class="trip-meta">
                                 <span><i class="bi bi-calendar3"></i> {{ o.trip.departure_at|date:"d.m.Y" }}</span>
                                 <span><i class="bi bi-receipt"></i> {{ o.order_number }}</span>
-                                <span><i class="bi bi-people"></i> {{ o.tickets_total }} квитків</span>
+                                <span><i class="bi bi-people"></i> {{ o.tickets_total }} {{ T.common_tickets_label }}</span>
                                 <span class="pill">{{ o.get_status_display }}</span>
                             </div>
                         </div>
                         <div class="trip-action">
-                            <div class="trip-price-label">Сума</div>
+                            <div class="trip-price-label">{{ T.account_amount_label }}</div>
                             <div class="trip-price">{{ o.total_price|floatformat:0 }} {{ o.currency }}</div>
-                            <button class="btn btn-primary btn-sm mt-2">Деталі</button>
+                            <button class="btn btn-primary btn-sm mt-2">{{ T.account_details_btn }}</button>
                         </div>
                     </div>
                 </a>
@@ -87,16 +87,16 @@
     {% else %}
         <div class="card p-5 text-center border-0 shadow-sm mb-4">
             <i class="bi bi-calendar-x" style="font-size:48px; color:#cbd5e1;"></i>
-            <h5 class="mt-3">У вас немає майбутніх поїздок</h5>
-            <p class="text-muted">Знайдіть рейс і забронюйте квиток за хвилину.</p>
+            <h5 class="mt-3">{{ T.account_no_upcoming_title }}</h5>
+            <p class="text-muted">{{ T.account_no_upcoming_text }}</p>
             <div>
-                <a href="{% url 'portal:home' %}" class="btn btn-primary"><i class="bi bi-search"></i> Знайти рейс</a>
+                <a href="{% url 'portal:home' %}" class="btn btn-primary"><i class="bi bi-search"></i> {{ T.account_find_btn }}</a>
             </div>
         </div>
     {% endif %}
 
     {% if past %}
-    <h4 class="mb-3 mt-4"><i class="bi bi-clock-history text-muted"></i> Історія поїздок ({{ past|length }})</h4>
+    <h4 class="mb-3 mt-4"><i class="bi bi-clock-history text-muted"></i> {{ T.account_history_section }} ({{ past|length }})</h4>
     <div class="row g-3">
         {% for o in past %}
         <div class="col-12">
@@ -115,7 +115,7 @@
                         </div>
                         <div class="trip-meta">
                             <span><i class="bi bi-receipt"></i> {{ o.order_number }}</span>
-                            <span><i class="bi bi-people"></i> {{ o.tickets_total }} квитків</span>
+                            <span><i class="bi bi-people"></i> {{ o.tickets_total }} {{ T.common_tickets_label }}</span>
                         </div>
                     </div>
                     <div class="trip-action">

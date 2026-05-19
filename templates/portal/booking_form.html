@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}Бронювання | {{ trip.route.name }}{% endblock %}
+{% block title %}{{ T.bf_title }} | {{ trip.route.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -64,9 +64,9 @@
 <section class="section-sm bg-light">
     <div class="container">
         <a href="{% url 'portal:trip_detail' trip.id %}" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left"></i> До рейсу
+            <i class="bi bi-arrow-left"></i> {{ T.bf_back_to_trip }}
         </a>
-        <h2 class="mt-2 mb-1">Оформлення бронювання</h2>
+        <h2 class="mt-2 mb-1">{{ T.bf_title }}</h2>
         <div class="text-muted">
             {{ trip.route.name }} · {{ trip.departure_at|date:"d.m.Y H:i" }}
         </div>
@@ -79,14 +79,14 @@
 {# Глобальний блок помилок: збирає усі помилки усіх форм в один alert #}
 {% if contact_form.errors or passenger_forms.0.errors %}
 <div class="alert alert-danger" role="alert" id="form-errors-alert">
-    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Будь ласка, заповніть усі обов'язкові поля</h6>
+    <h6 class="mb-2"><i class="bi bi-exclamation-triangle-fill"></i> {{ T.bf_validation_title }}</h6>
     <ul class="mb-0 small">
         {% for field, errors in contact_form.errors.items %}
             {% for e in errors %}<li>{{ contact_form|default:"" }} <b>{{ field }}</b>: {{ e }}</li>{% endfor %}
         {% endfor %}
         {% for pf in passenger_forms %}
             {% for field, errors in pf.errors.items %}
-                {% for e in errors %}<li>Пасажир №{{ forloop.parentloop.counter }} <b>{{ field }}</b>: {{ e }}</li>{% endfor %}
+                {% for e in errors %}<li>{{ T.bf_passenger_word }} №{{ forloop.parentloop.counter }} <b>{{ field }}</b>: {{ e }}</li>{% endfor %}
             {% endfor %}
         {% endfor %}
     </ul>
@@ -101,7 +101,7 @@
         <div class="col-lg-8">
 
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-people text-primary"></i> Кількість пасажирів</h5>
+                <h5 class="mb-3"><i class="bi bi-people text-primary"></i> {{ T.bf_pax_num }}</h5>
                 <div class="d-flex flex-wrap gap-2">
                     {% for n in count_options %}
                         <button type="button"
@@ -112,16 +112,16 @@
                         </button>
                     {% endfor %}
                 </div>
-                <div class="text-muted small mt-2">Доступно {{ free }} вільних місць</div>
+                <div class="text-muted small mt-2">{{ T.bf_pax_free_word }} {{ free }} {{ T.bf_pax_free_seats }}</div>
             </div>
 
             {% if total_seats %}
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-grid-3x3-gap text-primary"></i> Схема місць у автобусі</h5>
+                <h5 class="mb-3"><i class="bi bi-grid-3x3-gap text-primary"></i> {{ T.bf_seatmap_title }}</h5>
                 <div class="d-flex flex-column align-items-center">
                     <div class="seatmap">
                         <div class="seatmap-driver">
-                            <i class="bi bi-steering-wheel"></i> Водій
+                            <i class="bi bi-steering-wheel"></i> {{ T.bf_seatmap_driver }}
                         </div>
                         <div id="seatmap-grid" class="seatmap-grid"
                              data-total="{{ total_seats }}"
@@ -131,40 +131,40 @@
                     <div class="seat-legend">
                         <div class="seat-legend-item">
                             <div class="legend-box" style="background:#fff; border-color:#cbd5e1;"></div>
-                            Вільне
+                            {{ T.bf_legend_free }}
                         </div>
                         <div class="seat-legend-item">
                             <div class="legend-box" style="background:var(--primary); border-color:var(--primary);"></div>
-                            Обране
+                            {{ T.bf_legend_selected }}
                         </div>
                         <div class="seat-legend-item">
                             <div class="legend-box" style="background:#fee2e2; border-color:#fecaca;"></div>
-                            Зайняте
+                            {{ T.bf_legend_occupied }}
                         </div>
                     </div>
                     <div class="text-muted small mt-2" id="seatmap-hint">
-                        Оберіть {{ count }} місце{{ count|pluralize:"я,ь" }} (по одному для кожного пасажира)
+                        {{ T.bf_choose_seat_for_each }}
                     </div>
                 </div>
             </div>
             {% endif %}
 
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-geo-alt text-primary"></i> Маршрут поїздки</h5>
+                <h5 class="mb-3"><i class="bi bi-geo-alt text-primary"></i> {{ T.bf_route_section }}</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Місце посадки</label>
+                        <label class="form-label small text-muted">{{ T.bf_boarding_label }}</label>
                         <select name="boarding_stop" class="form-select" required>
-                            <option value="">— Оберіть —</option>
+                            <option value="">{{ T.bf_choose_dash }}</option>
                             {% for s in boarding_options %}
                                 <option value="{{ s.id }}">{{ s.city }} {% if s.station_name %}({{ s.station_name }}){% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Місце висадки</label>
+                        <label class="form-label small text-muted">{{ T.bf_alighting_label }}</label>
                         <select name="alighting_stop" class="form-select" required>
-                            <option value="">— Оберіть —</option>
+                            <option value="">{{ T.bf_choose_dash }}</option>
                             {% for s in alighting_options %}
                                 <option value="{{ s.id }}">{{ s.city }} {% if s.station_name %}({{ s.station_name }}){% endif %}</option>
                             {% endfor %}
@@ -174,25 +174,25 @@
             </div>
 
             <div class="card p-4 border-0 shadow-sm mb-3">
-                <h5 class="mb-3"><i class="bi bi-person-circle text-primary"></i> Контактні дані замовника</h5>
+                <h5 class="mb-3"><i class="bi bi-person-circle text-primary"></i> {{ T.bf_contact_section }}</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Прізвище <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_lastname }} <span class="text-danger">*</span></label>
                         {{ contact_form.last_name }}
                         {% if contact_form.last_name.errors %}<div class="text-danger small mt-1">{{ contact_form.last_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Ім'я <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_firstname }} <span class="text-danger">*</span></label>
                         {{ contact_form.first_name }}
                         {% if contact_form.first_name.errors %}<div class="text-danger small mt-1">{{ contact_form.first_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Телефон <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_phone }} <span class="text-danger">*</span></label>
                         {{ contact_form.phone }}
                         {% if contact_form.phone.errors %}<div class="text-danger small mt-1">{{ contact_form.phone.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Email (для квитка)</label>
+                        <label class="form-label small text-muted">{{ T.bf_email }}</label>
                         {{ contact_form.email }}
                         {% if contact_form.email.errors %}<div class="text-danger small mt-1">{{ contact_form.email.errors.0 }}</div>{% endif %}
                     </div>
@@ -202,36 +202,36 @@
             {% for pf in passenger_forms %}
             <div class="card p-4 border-0 shadow-sm mb-3">
                 <h5 class="mb-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-person text-primary"></i> Пасажир №{{ forloop.counter }}</span>
+                    <span><i class="bi bi-person text-primary"></i> {{ T.bf_passenger_word }} №{{ forloop.counter }}</span>
                     <span class="badge bg-light text-dark seat-badge"
                           data-passenger="{{ forloop.counter0 }}"
                           style="font-size:13px;">
-                        Місце: <span class="seat-value">—</span>
+                        {{ T.bf_seat_label }}: <span class="seat-value">—</span>
                     </span>
                 </h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Прізвище <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_lastname }} <span class="text-danger">*</span></label>
                         {{ pf.last_name }}
                         {% if pf.last_name.errors %}<div class="text-danger small mt-1">{{ pf.last_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted">Ім'я <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_firstname }} <span class="text-danger">*</span></label>
                         {{ pf.first_name }}
                         {% if pf.first_name.errors %}<div class="text-danger small mt-1">{{ pf.first_name.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small text-muted">Документ</label>
+                        <label class="form-label small text-muted">{{ T.bf_document_label }}</label>
                         {{ pf.document_type }}
                         {% if pf.document_type.errors %}<div class="text-danger small mt-1">{{ pf.document_type.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small text-muted">Номер документа <span class="text-danger">*</span></label>
+                        <label class="form-label small text-muted">{{ T.bf_document_number_label }} <span class="text-danger">*</span></label>
                         {{ pf.document_number }}
                         {% if pf.document_number.errors %}<div class="text-danger small mt-1">{{ pf.document_number.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small text-muted">Тип квитка</label>
+                        <label class="form-label small text-muted">{{ T.bf_price_type_label }}</label>
                         {{ pf.price_type }}
                         {% if pf.price_type.errors %}<div class="text-danger small mt-1">{{ pf.price_type.errors.0 }}</div>{% endif %}
                     </div>
@@ -244,26 +244,26 @@
 
         <div class="col-lg-4">
             <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
-                <h5 class="mb-3">До сплати</h5>
+                <h5 class="mb-3">{{ T.bf_summary_title }}</h5>
                 <div class="d-flex justify-content-between small mb-2">
-                    <span class="text-muted">Рейс</span>
+                    <span class="text-muted">{{ T.bf_summary_trip }}</span>
                     <span>{{ trip.route.code }}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
-                    <span class="text-muted">Дата</span>
+                    <span class="text-muted">{{ T.bf_summary_date }}</span>
                     <span>{{ trip.departure_at|date:"d.m.Y H:i" }}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
-                    <span class="text-muted">Ціна за квиток</span>
+                    <span class="text-muted">{{ T.bf_summary_price_per }}</span>
                     <span>{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
-                    <span class="text-muted">Кількість</span>
+                    <span class="text-muted">{{ T.bf_summary_count }}</span>
                     <span id="summary-count">{{ count }}</span>
                 </div>
 
                 <div class="mt-3">
-                    <label class="form-label small text-muted">Промокод (за наявності)</label>
+                    <label class="form-label small text-muted">{{ T.bf_promo_label }}</label>
                     <input type="text" name="promo_code" class="form-control"
                            placeholder="SUMMER15"
                            style="text-transform: uppercase;">
@@ -272,20 +272,20 @@
                 {% if user.is_authenticated and user.loyalty_points > 0 %}
                 <div class="mt-3 p-2 rounded" style="background: var(--primary-soft);">
                     <label class="form-label small mb-1" style="color: var(--primary); font-weight:600;">
-                        <i class="bi bi-stars"></i> Бонусні бали
+                        <i class="bi bi-stars"></i> {{ T.bf_loyalty_section }}
                     </label>
                     <div class="small text-muted mb-2">
-                        Доступно: <b>{{ user.loyalty_points }}</b> балів. 1 бал = 1 EUR знижки (макс. 50% суми).
+                        {{ T.bf_loyalty_available }}: <b>{{ user.loyalty_points }}</b> {{ T.bf_loyalty_hint }}
                     </div>
                     <input type="number" name="use_points" min="0" max="{{ user.loyalty_points }}"
                            value="0" class="form-control form-control-sm"
-                           placeholder="Скільки балів використати">
+                           placeholder="{{ T.bf_loyalty_input_ph }}">
                 </div>
                 {% endif %}
 
                 <hr>
                 <div class="d-flex justify-content-between align-items-baseline mb-3">
-                    <span>Разом</span>
+                    <span>{{ T.bf_total_word }}</span>
                     <div>
                         <span style="font-size:28px; font-weight:800; color: var(--primary);" id="summary-total">{{ total_price|floatformat:0 }}</span>
                         <span> {{ trip.currency }}</span>
@@ -293,10 +293,10 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-check-circle"></i> Оформити замовлення
+                    <i class="bi bi-check-circle"></i> {{ T.bf_submit_btn }}
                 </button>
                 <div class="small text-muted text-center mt-3">
-                    Натискаючи кнопку, ви погоджуєтесь з умовами перевезення.
+                    {{ T.bf_terms_hint }}
                 </div>
             </div>
         </div>

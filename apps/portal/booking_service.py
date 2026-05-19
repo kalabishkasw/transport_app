@@ -19,7 +19,7 @@ from apps.routes.models import Stop, Trip
 
 
 class BookingError(Exception):
-    """Бізнесова помилка під час бронювання (для виводу користувачу)."""
+    """бізнесова помилка під час бронювання (для виводу користувачу)."""
 
 
 User = get_user_model()
@@ -38,9 +38,9 @@ def create_booking(
     use_loyalty_points: int = 0,
 ) -> Order:
     """
-    Створює замовлення на рейс з передачею списку пасажирів.
+    створює замовлення на рейс з передачею списку пасажирів.
 
-    Параметри
+    параметри
     ---------
     trip_id : int
         ID рейсу (буде заблокований SELECT FOR UPDATE).
@@ -59,12 +59,12 @@ def create_booking(
     use_loyalty_points : int
         Скільки балів використати (1 бал = 1 EUR, максимум 50% суми).
 
-    Повертає
+    повертає
     --------
     Order
         Створене замовлення зі згенерованим order_number, перерахованою сумою.
 
-    Викидає
+    викидає
     -------
     BookingError
         Якщо немає вільних місць, маршрут зупинок невалідний, рейс недоступний.
@@ -73,7 +73,7 @@ def create_booking(
     if not passengers:
         raise BookingError('Список пасажирів порожній.')
 
-    # 1. Блокуємо рейс. Інші транзакції чекатимуть.
+    # 1. блокуємо рейс. інші транзакції чекатимуть
     try:
         trip = Trip.objects.select_for_update().select_related('vehicle', 'route').get(pk=trip_id)
     except Trip.DoesNotExist:
@@ -82,13 +82,13 @@ def create_booking(
     if trip.status not in ('on_sale', 'planned'):
         raise BookingError('Рейс недоступний для бронювання.')
 
-    # 2. Перевірка коректності зупинок.
+    # 2. перевірка коректності зупинок
     if boarding_stop.route_id != trip.route_id or alighting_stop.route_id != trip.route_id:
         raise BookingError('Зупинки не належать маршруту цього рейсу.')
     if alighting_stop.order <= boarding_stop.order:
         raise BookingError('Пункт висадки має бути після пункту посадки.')
 
-    # 3. Перевіряємо вільні місця ВСЕРЕДИНІ блокування.
+    # 3. перевіряємо вільні місця всерединнні блокування
     sold = Ticket.objects.filter(
         order__trip=trip,
         status__in=['booked', 'paid'],
@@ -101,8 +101,21 @@ def create_booking(
             f'а ви намагаєтесь забронювати {len(passengers)}.'
         )
 
-    # 4. Перевірка зайнятих місць (щоб два клієнти не отримали одне місце).
+    # 4. перевірка зайнятих місць (щоб два клієнти не отримали одне місце).
     requested_seats = [p.get('seat_number', '').strip() for p in passengers if p.get('seat_number', '').strip()]
+
+    # перевіряю що всі вказані місця у межах автобуса.
+    # форма вже гарантує що це цифри, лишилось обмежити верхньою межею.
+    if requested_seats and seats_total > 0:
+        for s in requested_seats:
+            try:
+                if int(s) > seats_total:
+                    raise BookingError(
+                        f'Місце {s} не існує. У цьому автобусі лише {seats_total} місць.'
+                    )
+            except ValueError:
+                raise BookingError(f'Невірний номер місця: {s}.')
+
     if requested_seats:
         occupied = set(
             Ticket.objects.filter(
@@ -117,11 +130,11 @@ def create_booking(
             raise BookingError(
                 f'Місц{"е" if len(clash) == 1 else "я"} {", ".join(clash)} вже зайнят{"е" if len(clash) == 1 else "і"}.'
             )
-        # Перевірка дублювання у самому замовленні
+        # перевірка дублювання у самому замовленні
         if len(requested_seats) != len(set(requested_seats)):
             raise BookingError('У замовленні є пасажири з однаковими номерами місць.')
 
-    # 5. Промокод (теж під замком).
+    # 5. промокод (теж під замком).
     promo_code_obj: Optional[PromoCode] = None
     if promo_code_input:
         try:
@@ -134,7 +147,7 @@ def create_booking(
         if promo_code_obj and not promo_code_obj.is_valid_now:
             promo_code_obj = None
 
-    # 6. Створюємо замовлення.
+    # 6. створюю замовлення
     order = Order.objects.create(
         trip=trip,
         contact_first_name=contact['first_name'],
@@ -147,9 +160,12 @@ def create_booking(
         promo_code=promo_code_obj,
     )
 
-    # 7. Створюємо квитки. signals.py перерахує total_price.
-    for pd in passengers:
-        Ticket.objects.create(
+    # 7. створюємо квитки одним bulk_create щоб не запускати post_save сигнал
+    # для кожного квитка окремо (інакше recalculate_total виконається N разів
+    # замість одного). signals.recalc_order_total_on_save при bulk_create
+    # не викликається - тому далі робимо recalculate_total вручну.
+    ticket_objects = [
+        Ticket(
             order=order,
             passenger_first_name=pd['first_name'],
             passenger_last_name=pd['last_name'],
@@ -162,13 +178,29 @@ def create_booking(
             price=trip.base_price,
             status=Ticket.Status.BOOKED,
         )
+        for pd in passengers
+    ]
+    created_tickets = Ticket.objects.bulk_create(ticket_objects)
+    # bulk_create не викликає save() на кожному квитку, тому ticket_number
+    # лишається порожнім. Заповнюємо його одним апдейтом.
+    from datetime import datetime
+    year = datetime.now().year
+    for t in created_tickets:
+        if not t.ticket_number and t.pk:
+            t.ticket_number = f'TK-{year}-{t.pk:06d}'
+    Ticket.objects.bulk_update(
+        [t for t in created_tickets if t.pk and t.ticket_number],
+        ['ticket_number'],
+    )
+    # один перерахунок суми замість N
+    order.recalculate_total()
 
-    # 8. Інкремент лічильника промокоду (під замком, без race condition).
+    # 8. інкремент лічильника промокоду (під замком, без race condition).
     if promo_code_obj:
         promo_code_obj.times_used = promo_code_obj.times_used + 1
         promo_code_obj.save(update_fields=['times_used'])
 
-    # 9. Лояльність: оновлюємо суму і списуємо бали користувача.
+    # 9. лояльність: оновлюємо суму і списуємо бали користувача.
     if use_loyalty_points > 0 and user is not None and user.is_authenticated:
         from django.conf import settings as django_settings
         order.refresh_from_db(fields=['total_price', 'discount_amount'])
@@ -180,11 +212,11 @@ def create_booking(
             order.discount_amount = (order.discount_amount or Decimal('0')) + Decimal(used)
             order.total_price = order.total_price - Decimal(used)
             order.save(update_fields=['discount_amount', 'total_price', 'updated_at'])
-            # Перечитуємо користувача під замком, щоб не списати двічі.
+            # перечитуємо користувача під замком, щоб не списати двічі.
             locked_user = User.objects.select_for_update().get(pk=user.pk)
             locked_user.loyalty_points = max(0, (locked_user.loyalty_points or 0) - used)
             locked_user.save(update_fields=['loyalty_points'])
-            # Синхронізуємо у пам'яті теж.
+            # синхронізуємо у пам'яті теж.
             user.loyalty_points = locked_user.loyalty_points
 
     return order

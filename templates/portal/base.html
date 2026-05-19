@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="{{ request.session.portal_lang|default:'uk' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -627,10 +627,13 @@
                     <i class="bi bi-person-circle"></i>
                     <span class="auth-text">{{ user.first_name|default:user.username }}</span>
                 </a>
-                <a href="{% url 'portal:logout' %}" class="btn btn-sm btn-outline-secondary auth-link">
-                    <i class="bi bi-box-arrow-right d-none mobile-only-icon"></i>
-                    <span class="auth-text">{{ T.nav_logout }}</span>
-                </a>
+                <form method="post" action="{% url 'portal:logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary auth-link">
+                        <i class="bi bi-box-arrow-right d-none mobile-only-icon"></i>
+                        <span class="auth-text">{{ T.nav_logout }}</span>
+                    </button>
+                </form>
             {% else %}
                 <a href="{% url 'portal:login' %}" class="nav-link-public auth-link">
                     <i class="bi bi-box-arrow-in-right d-none mobile-only-icon"></i>

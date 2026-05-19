@@ -1,18 +1,18 @@
 """
-Автоматично оновлює статуси рейсів та пов'язаних замовлень/квитків
+автоматично оновлює статуси рейсів та пов'язаних замовлень/квитків
 відповідно до поточного часу.
 
-Логіка:
+логіка така
   - Рейс ще не відбувся (now < departure)        - статус залишається.
   - Рейс зараз у дорозі (departure <= now < arrival): planned/on_sale -> in_progress
   - Рейс вже завершився (now >= arrival):       planned/on_sale/in_progress -> completed
   - Скасовані рейси (cancelled) залишаються без змін.
 
-Для замовлень:
+для замовлень:
   - Якщо рейс став completed: confirmed/pending/paid -> completed; квитки -> used
   - Якщо рейс став in_progress: paid -> in_progress (інші не чіпаємо)
 
-Запуск:
+запуск:
     python manage.py update_trip_statuses
     python manage.py update_trip_statuses --dry-run    # без запису, лише звіт
 """
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         dry = options['dry_run']
         now = timezone.now()
 
-        # Тимчасово відключаємо сигнали (інакше для тисяч замовлень
+        # тимчасово відключаю сигнали (інакше для тисяч замовлень
         # буде відправлено лист і нараховано бали)
         post_save.disconnect(send_order_confirmation_email, sender=Order)
         pre_save.disconnect(award_loyalty_points_on_completion, sender=Order)
@@ -57,7 +57,7 @@ class Command(BaseCommand):
                 'tickets_to_used': 0,
             }
 
-            # Усі рейси з їх маршрутами (потрібна тривалість)
+            # усі рейси з їх маршрутами (потрібна тривалість)
             trips = Trip.objects.select_related('route').exclude(
                 status__in=[Trip.Status.CANCELLED, Trip.Status.COMPLETED]
             )

@@ -73,16 +73,16 @@ class AutoUpdateTripStatusMiddleware:
 
     def _update_trip_statuses(self, now):
         """
-        Оновлюємо статуси рейсів та пов'язаних замовлень/квитків.
+        оновлюю статуси рейсів та пов'язаних замовлень/квитків.
 
-        ВАЖЛИВО: ми НЕ disconnect-имо сигнали (це не thread-safe).
-        Використовуємо `.update()` на queryset-ах - bulk-апдейти НЕ викликають
+        не disconnect сигнали
+        використовав `.update()` на queryset-ах - bulk-апдейти не викликають
         post_save/pre_save сигналів, тому email-розсилки не активуються.
 
-        Але бали лояльності нараховуємо ВРУЧНУ прямо тут, бо сигнал
+        але бали лояльності нараховував вручну прямо тут, бо сигнал
         award_loyalty_points_on_completion не спрацює (теж через bulk update).
         """
-        # Локальні імпорти, щоб уникнути циклічних залежностей при старті Django
+        # локальні імпорти, щоб уникнути циклічних залежностей при старті Django
         from django.conf import settings as django_settings
         from django.contrib.auth import get_user_model
         from django.db import transaction
@@ -117,9 +117,10 @@ class AutoUpdateTripStatusMiddleware:
                             updated_at=now,
                         )
 
-                        # Перед update збираємо суми балів які треба нарахувати
+                        # перед update збираємо суми балів які треба нарахувати
                         # за кожним користувачем. Беремо тільки замовлення які
-                        # переходять у COMPLETED (а не вже completed).
+                        # переходять у COMPLETED (а не вже completed) і де ще
+                        # не нараховано бали (loyalty_awarded_at__isnull=True).
                         orders_to_complete = (
                             Order.objects
                             .filter(
@@ -130,13 +131,17 @@ class AutoUpdateTripStatusMiddleware:
                                     Order.Status.PAID,
                                     Order.Status.IN_PROGRESS,
                                 ],
+                                loyalty_awarded_at__isnull=True,
                             )
                             .exclude(created_by__isnull=True)
                             .values('created_by')
                             .annotate(total=Sum('total_price'))
                         )
 
-                        # Тепер оновлюємо статуси (bulk - без сигналів)
+                        # тепер оновлюємо статуси (bulk - без сигналів).
+                        # одразу ставимо loyalty_awarded_at щоб post_save сигнал
+                        # (якщо колись комусь захочеться окремо .save() це замовлення)
+                        # не нарахував бали повторно.
                         Order.objects.filter(
                             trip=trip,
                             status__in=[
@@ -145,13 +150,16 @@ class AutoUpdateTripStatusMiddleware:
                                 Order.Status.PAID,
                                 Order.Status.IN_PROGRESS,
                             ],
-                        ).update(status=Order.Status.COMPLETED)
+                        ).update(
+                            status=Order.Status.COMPLETED,
+                            loyalty_awarded_at=now,
+                        )
                         Ticket.objects.filter(
                             order__trip=trip,
                             status__in=[Ticket.Status.BOOKED, Ticket.Status.PAID],
                         ).update(status=Ticket.Status.USED)
 
-                        # Нараховуємо бали кожному користувачу за його сумою.
+                        # нараховуємо бали кожному користувачу за його сумою.
                         # F-expression-style update щоб уникнути race condition.
                         from django.db.models import F
                         for row in orders_to_complete:
@@ -164,7 +172,7 @@ class AutoUpdateTripStatusMiddleware:
 
                         stats['completed'] += 1
                 elif trip.departure_at <= now < arrival:
-                    # Рейс у дорозі
+                    # рейс у дорозі
                     if trip.status != Trip.Status.IN_PROGRESS:
                         Trip.objects.filter(pk=trip.pk).update(
                             status=Trip.Status.IN_PROGRESS,

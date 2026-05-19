@@ -27,7 +27,7 @@ class PromoCodeAdmin(admin.ModelAdmin):
 
 class TicketInline(admin.TabularInline):
     """
-    Інлайн для додавання квитків прямо у формі замовлення.
+    інлайн для додавання квитків прямо у формі замовлення.
     """
     model = Ticket
     extra = 1
