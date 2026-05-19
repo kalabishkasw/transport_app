@@ -33,14 +33,16 @@ def _user_can_view_ticket(user, ticket):
 
 @login_required
 def ticket_pdf(request, ticket_id):
-    """завантажити PDF квитка. тільки власник або працівник."""
+    """завантажити PDF квитка. тільки власник або працівник.
+    мова PDF береться з сесії portal_lang (uk/en)."""
     ticket = get_object_or_404(
         Ticket.objects.select_related('order', 'order__trip__route', 'order__trip__vehicle'),
         pk=ticket_id,
     )
     if not _user_can_view_ticket(request.user, ticket):
         raise Http404('Квиток не знайдено.')
-    pdf = generate_ticket_pdf(ticket)
+    lang = request.session.get('portal_lang', 'uk')
+    pdf = generate_ticket_pdf(ticket, lang=lang)
     response = HttpResponse(pdf.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="ticket_{ticket.ticket_number}.pdf"'
     return response
@@ -56,7 +58,8 @@ def passenger_list_pdf(request, trip_id):
     if not (user.is_staff or getattr(user, 'role', None) in ('admin', 'dispatcher', 'driver')):
         raise Http404('Документ недоступний.')
     trip = get_object_or_404(Trip, pk=trip_id)
-    pdf = generate_passenger_list_pdf(trip)
+    lang = request.session.get('portal_lang', 'uk')
+    pdf = generate_passenger_list_pdf(trip, lang=lang)
     response = HttpResponse(pdf.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="passenger_list_trip_{trip.id}.pdf"'
     return response

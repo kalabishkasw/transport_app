@@ -83,14 +83,137 @@ def _register_fonts():
 
 
 COMPANY_NAME = 'TransAuto Travel'
-COMPANY_TAG = 'Міжнародні пасажирські перевезення'
+
+# тексти на PDF-документах, окремо для UA і EN
+PDF_LABELS = {
+    'uk': {
+        'tag': 'Міжнародні пасажирські перевезення',
+        'ticket': 'КВИТОК',
+        'route': 'Маршрут',
+        'code': 'Код',
+        'departure': 'Відправлення',
+        'ticket_type': 'Тип квитка',
+        'vehicle': 'Транспорт',
+        'seat': 'Місце',
+        'passenger': 'Пасажир',
+        'document': 'Документ',
+        'boarding': 'Посадка',
+        'alighting': 'Висадка',
+        'price': 'Ціна',
+        'status': 'Статус',
+        'scan_at_boarding': 'Скануй на посадці',
+        'footer': (
+            'Квиток дійсний при наявності документа, що посвідчує особу пасажира. '
+            'У разі запізнення на посадку місце не зберігається. '
+            'TransAuto Travel · support@transauto.travel'
+        ),
+        # посадковий лист
+        'passenger_list_title': 'ПОСАДКОВИЙ ЛИСТ ПАСАЖИРІВ',
+        'pl_route': 'Маршрут',
+        'pl_departure': 'Відправлення',
+        'pl_vehicle': 'Транспорт',
+        'pl_driver': 'Водій',
+        'pl_co_driver': 'змінний водій',
+        'pl_n': '№',
+        'pl_passenger': 'Прізвище та імя',
+        'pl_document': 'Документ',
+        'pl_boarding': 'Посадка',
+        'pl_alighting': 'Висадка',
+        'pl_seat': 'Місце',
+        'pl_signature': 'Підпис',
+        'pl_total': 'Усього пасажирів',
+        'pl_no_tickets': 'На цей рейс ще немає квитків',
+        'pl_driver_signature': 'Підпис водія: ____________________ Дата: ____________________',
+    },
+    'en': {
+        'tag': 'International passenger transport',
+        'ticket': 'TICKET',
+        'route': 'Route',
+        'code': 'Code',
+        'departure': 'Departure',
+        'ticket_type': 'Ticket type',
+        'vehicle': 'Vehicle',
+        'seat': 'Seat',
+        'passenger': 'Passenger',
+        'document': 'Document',
+        'boarding': 'Boarding',
+        'alighting': 'Drop-off',
+        'price': 'Price',
+        'status': 'Status',
+        'scan_at_boarding': 'Scan at boarding',
+        'footer': (
+            'The ticket is valid only with an ID document. If you miss boarding, '
+            'the seat is not reserved. '
+            'TransAuto Travel · support@transauto.travel'
+        ),
+        # посадковий лист
+        'passenger_list_title': 'PASSENGER BOARDING LIST',
+        'pl_route': 'Route',
+        'pl_departure': 'Departure',
+        'pl_vehicle': 'Vehicle',
+        'pl_driver': 'Driver',
+        'pl_co_driver': 'co-driver',
+        'pl_n': 'No',
+        'pl_passenger': 'Last and first name',
+        'pl_document': 'Document',
+        'pl_boarding': 'Boarding',
+        'pl_alighting': 'Drop-off',
+        'pl_seat': 'Seat',
+        'pl_signature': 'Signature',
+        'pl_total': 'Total passengers',
+        'pl_no_tickets': 'No tickets for this trip yet',
+        'pl_driver_signature': 'Driver signature: ____________________ Date: ____________________',
+    },
+}
 
 
-def generate_ticket_pdf(ticket):
+def _pdf_labels(lang):
+    """повертає словник підписів PDF за мовою. Fallback на українську."""
+    return PDF_LABELS.get(lang, PDF_LABELS['uk'])
+
+
+def generate_ticket_pdf(ticket, lang='uk'):
     """
     генерація PDF квитка у вигляді посадкового талона на A4.
     гарантовано вміщується на одну сторінку.
+    мова (lang) керує підписами полів і значеннями вибору
+    (тип документа, статус, місто посадки/висадки).
     """
+    # локальний імпорт щоб уникнути циклічних залежностей
+    from apps.portal.templatetags.i18n_extras import (
+        CITY_NAMES_EN, DOC_TYPE_EN, PRICE_TYPE_EN, TICKET_STATUS_EN,
+        get_eur_to_uah,
+    )
+    from decimal import Decimal as _D
+    L = _pdf_labels(lang)
+
+    def tr_city(name):
+        if lang == 'en' and name:
+            return CITY_NAMES_EN.get(name, name)
+        return name
+
+    def tr_doc(value):
+        if lang == 'en':
+            return DOC_TYPE_EN.get(value, ticket.get_document_type_display())
+        return ticket.get_document_type_display()
+
+    def tr_price(value):
+        if lang == 'en':
+            return PRICE_TYPE_EN.get(value, ticket.get_price_type_display())
+        return ticket.get_price_type_display()
+
+    def tr_status(value):
+        if lang == 'en':
+            return TICKET_STATUS_EN.get(value, ticket.get_status_display())
+        return ticket.get_status_display()
+
+    def format_money(amount):
+        """форматує суму у локальній валюті: UA - грн, EN - EUR."""
+        if lang == 'en':
+            return f'{_D(amount):.0f} EUR'
+        rate = get_eur_to_uah()
+        return f'{(_D(amount) * rate):.0f} грн'
+
     _register_fonts()
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -122,8 +245,8 @@ def generate_ticket_pdf(ticket):
 
     # шапка: лого ліворуч, № квитка праворуч
     header_data = [[
-        [Paragraph(COMPANY_NAME, co_title), Paragraph(COMPANY_TAG, co_sub)],
-        [Paragraph('КВИТОК', title_big), Paragraph(f'№ {ticket.ticket_number}', number_style)],
+        [Paragraph(COMPANY_NAME, co_title), Paragraph(L['tag'], co_sub)],
+        [Paragraph(L['ticket'], title_big), Paragraph(f'№ {ticket.ticket_number}', number_style)],
     ]]
     header = Table(header_data, colWidths=[10 * cm, 7 * cm])
     header.setStyle(TableStyle([
@@ -165,21 +288,23 @@ def generate_ticket_pdf(ticket):
         vehicle_full = f'{trip.vehicle.brand} {trip.vehicle.model[:22]}…'
 
     # кожен рядок таблиці = одна пара полів (зліва + спава). усього 6 рядків.
+    route_name_localized = f'{tr_city(route.origin_city)} - {tr_city(route.destination_city)}'
+    departure_str = trip.departure_at.strftime('%d.%m.%Y %H:%M')
     info_grid_data = [
-        [field_cell('Маршрут', route.name),
-         field_cell('Код', route.code)],
-        [field_cell('Відправлення', trip.departure_at.strftime('%d.%m.%Y о %H:%M')),
-         field_cell('Тип квитка', ticket.get_price_type_display())],
-        [field_cell('Транспорт', vehicle_full, sub=trip.vehicle.registration_number),
-         field_cell('Місце', ticket.seat_number or '—')],
-        [field_cell('Пасажир', ticket.passenger_full_name),
-         field_cell('Документ', ticket.get_document_type_display(), sub=ticket.document_number)],
-        [field_cell('Посадка', ticket.boarding_stop.city,
+        [field_cell(L['route'], route_name_localized),
+         field_cell(L['code'], route.code)],
+        [field_cell(L['departure'], departure_str),
+         field_cell(L['ticket_type'], tr_price(ticket.price_type))],
+        [field_cell(L['vehicle'], vehicle_full, sub=trip.vehicle.registration_number),
+         field_cell(L['seat'], ticket.seat_number or '—')],
+        [field_cell(L['passenger'], ticket.passenger_full_name),
+         field_cell(L['document'], tr_doc(ticket.document_type), sub=ticket.document_number)],
+        [field_cell(L['boarding'], tr_city(ticket.boarding_stop.city),
                     sub=ticket.boarding_stop.station_name or None),
-         field_cell('Висадка', ticket.alighting_stop.city,
+         field_cell(L['alighting'], tr_city(ticket.alighting_stop.city),
                     sub=ticket.alighting_stop.station_name or None)],
-        [field_cell('Ціна', f'{ticket.price} {trip.currency}'),
-         field_cell('Статус', ticket.get_status_display())],
+        [field_cell(L['price'], format_money(ticket.price)),
+         field_cell(L['status'], tr_status(ticket.status))],
     ]
     info_grid = Table(info_grid_data, colWidths=[6 * cm, 5.5 * cm])
     info_grid.setStyle(TableStyle([
@@ -193,7 +318,7 @@ def generate_ticket_pdf(ticket):
         ('LINEBELOW', (0, 0), (-1, -2), 0.3, colors.HexColor('#e2e8f0')),
     ]))
 
-    qr_block_data = [[qr_img], [Paragraph('Скануй на посадці', qr_caption)]]
+    qr_block_data = [[qr_img], [Paragraph(L['scan_at_boarding'], qr_caption)]]
     qr_block = Table(qr_block_data, colWidths=[5 * cm])
     qr_block.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -220,23 +345,28 @@ def generate_ticket_pdf(ticket):
     elements.append(line2)
     elements.append(Spacer(1, 4 * mm))
 
-    elements.append(Paragraph(
-        'Квиток дійсний при наявності документа, що посвідчує особу пасажира. '
-        'У разі запізнення на посадку місце не зберігається. '
-        'TransAuto Travel · support@transauto.travel',
-        footer_style,
-    ))
+    elements.append(Paragraph(L['footer'], footer_style))
 
     doc.build(elements)
     buf.seek(0)
     return buf
 
 
-def generate_passenger_list_pdf(trip):
+def generate_passenger_list_pdf(trip, lang='uk'):
     """
     генерація посадкового листа: список усіх квитків на рейс.
+    зазвичай це службовий документ для водія українською, але теж
+    підтримуємо EN для повноти.
     """
     from apps.orders.models import Ticket  # імпорт всередині функції щоб уникнути циклічних залежностей
+    from apps.portal.templatetags.i18n_extras import CITY_NAMES_EN
+
+    L = _pdf_labels(lang)
+
+    def tr_city(name):
+        if lang == 'en' and name:
+            return CITY_NAMES_EN.get(name, name)
+        return name
 
     _register_fonts()
     buf = BytesIO()
@@ -256,18 +386,19 @@ def generate_passenger_list_pdf(trip):
 
     elements = [
         Paragraph(COMPANY_NAME, ParagraphStyle('Co', fontName='DejaVu-Bold', fontSize=12, alignment=1, spaceAfter=2)),
-        Paragraph(COMPANY_TAG, subtitle),
-        Paragraph('ПОСАДКОВИЙ ЛИСТ ПАСАЖИРІВ', title_style),
+        Paragraph(L['tag'], subtitle),
+        Paragraph(L['passenger_list_title'], title_style),
     ]
 
-    elements.append(Paragraph(f'<b>Маршрут:</b> {trip.route.name} ({trip.route.code})', info_style))
-    elements.append(Paragraph(f'<b>Відправлення:</b> {trip.departure_at.strftime("%d.%m.%Y о %H:%M")}', info_style))
+    route_name_localized = f'{tr_city(trip.route.origin_city)} - {tr_city(trip.route.destination_city)}'
+    elements.append(Paragraph(f'<b>{L["pl_route"]}:</b> {route_name_localized} ({trip.route.code})', info_style))
+    elements.append(Paragraph(f'<b>{L["pl_departure"]}:</b> {trip.departure_at.strftime("%d.%m.%Y %H:%M")}', info_style))
     elements.append(Paragraph(
-        f'<b>Транспорт:</b> {trip.vehicle.brand} {trip.vehicle.model} ({trip.vehicle.registration_number})',
+        f'<b>{L["pl_vehicle"]}:</b> {trip.vehicle.brand} {trip.vehicle.model} ({trip.vehicle.registration_number})',
         info_style,
     ))
-    co_part = f', змінний водій: {trip.co_driver}' if trip.co_driver_id else ''
-    elements.append(Paragraph(f'<b>Водій:</b> {trip.main_driver}{co_part}', info_style))
+    co_part = f', {L["pl_co_driver"]}: {trip.co_driver}' if trip.co_driver_id else ''
+    elements.append(Paragraph(f'<b>{L["pl_driver"]}:</b> {trip.main_driver}{co_part}', info_style))
     elements.append(Spacer(1, 5 * mm))
 
     tickets = Ticket.objects.filter(
@@ -280,32 +411,39 @@ def generate_passenger_list_pdf(trip):
     cell_style = ParagraphStyle('Cell', fontName='DejaVu', fontSize=9, leading=11, wordWrap='CJK')
     cell_bold = ParagraphStyle('CellBold', fontName='DejaVu-Bold', fontSize=9, leading=11, wordWrap='CJK')
 
-    DOC_SHORT = {
+    DOC_SHORT_UA = {
         'passport': 'Паспорт',
         'id_card': 'ID-картка',
         'driving': 'Посв. водія',
         'birth': 'Свідоцтво',
     }
+    DOC_SHORT_EN = {
+        'passport': 'Passport',
+        'id_card': 'ID card',
+        'driving': 'Driving lic.',
+        'birth': 'Birth cert.',
+    }
+    doc_short_map = DOC_SHORT_EN if lang == 'en' else DOC_SHORT_UA
 
     headers = [
-        Paragraph('№', cell_bold),
-        Paragraph('Прізвище та ім\'я', cell_bold),
-        Paragraph('Документ', cell_bold),
-        Paragraph('Посадка', cell_bold),
-        Paragraph('Висадка', cell_bold),
-        Paragraph('Місце', cell_bold),
-        Paragraph('Підпис', cell_bold),
+        Paragraph(L['pl_n'], cell_bold),
+        Paragraph(L['pl_passenger'], cell_bold),
+        Paragraph(L['pl_document'], cell_bold),
+        Paragraph(L['pl_boarding'], cell_bold),
+        Paragraph(L['pl_alighting'], cell_bold),
+        Paragraph(L['pl_seat'], cell_bold),
+        Paragraph(L['pl_signature'], cell_bold),
     ]
     data = [headers]
 
     for i, t in enumerate(tickets, 1):
-        doc_short = DOC_SHORT.get(t.document_type, t.get_document_type_display())
+        doc_short = doc_short_map.get(t.document_type, t.get_document_type_display())
         data.append([
             Paragraph(str(i), cell_style),
             Paragraph(t.passenger_full_name, cell_style),
             Paragraph(f'{doc_short}: {t.document_number}', cell_style),
-            Paragraph(t.boarding_stop.city, cell_style),
-            Paragraph(t.alighting_stop.city, cell_style),
+            Paragraph(tr_city(t.boarding_stop.city), cell_style),
+            Paragraph(tr_city(t.alighting_stop.city), cell_style),
             Paragraph(t.seat_number or '-', cell_style),
             Paragraph('', cell_style),
         ])
@@ -313,7 +451,7 @@ def generate_passenger_list_pdf(trip):
     if len(data) == 1:
         data.append([
             Paragraph('', cell_style),
-            Paragraph('На цей рейс ще немає квитків', cell_style),
+            Paragraph(L['pl_no_tickets'], cell_style),
             Paragraph('', cell_style),
             Paragraph('', cell_style),
             Paragraph('', cell_style),
@@ -338,10 +476,10 @@ def generate_passenger_list_pdf(trip):
     elements.append(table)
 
     elements.append(Spacer(1, 8 * mm))
-    elements.append(Paragraph(f'<b>Усього пасажирів:</b> {tickets.count()}', info_style))
+    elements.append(Paragraph(f'<b>{L["pl_total"]}:</b> {tickets.count()}', info_style))
     elements.append(Spacer(1, 10 * mm))
     elements.append(Paragraph(
-        'Підпис водія: ____________________ Дата: ____________________',
+        L['pl_driver_signature'],
         ParagraphStyle('Sign', fontName='DejaVu', fontSize=10),
     ))
 

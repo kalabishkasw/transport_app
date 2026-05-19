@@ -2,7 +2,7 @@
 {% load transport_extras %}
 {% load i18n_extras %}
 
-{% block title %}Відстеження рейсу {{ trip.route.code }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
+{% block title %}{{ T.gps_title }} {{ trip.route.code }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -83,52 +83,52 @@
 <section class="section-sm">
     <div class="container">
         <a href="{% url 'portal:trip_detail' trip.id %}" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left"></i> До деталей рейсу
+            <i class="bi bi-arrow-left"></i> {{ T.gps_back_to_trip }}
         </a>
 
         <div class="d-flex justify-content-between align-items-center mt-2 mb-3 flex-wrap gap-2">
             <div>
-                <h2 class="mb-1">Відстеження рейсу <span class="text-muted small">({{ trip.route.code }})</span></h2>
+                <h2 class="mb-1">{{ T.gps_title }} <span class="text-muted small">({{ trip.route.code }})</span></h2>
                 <div class="text-muted">
                     <span class="live-pulse"></span>
-                    <span id="liveStatus">Зєднання з GPS-трекером...</span>
+                    <span id="liveStatus">{{ T.gps_connecting }}</span>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <div class="form-check form-switch m-0" title="Прискорена симуляція руху для демонстрації">
+                <div class="form-check form-switch m-0" title="{{ T.gps_demo_tooltip }}">
                     <input class="form-check-input" type="checkbox" id="demoModeToggle">
                     <label class="form-check-label small" for="demoModeToggle">
-                        <i class="bi bi-play-circle"></i> Demo-режим
+                        <i class="bi bi-play-circle"></i> {{ T.gps_demo_label }}
                     </label>
                 </div>
-                <span class="pill" id="statusBadge"><i class="bi bi-broadcast"></i> Завантаження</span>
+                <span class="pill" id="statusBadge"><i class="bi bi-broadcast"></i> {{ T.gps_loading_badge }}</span>
             </div>
         </div>
 
         <div class="row g-3 mb-3">
             <div class="col-6 col-md-3">
                 <div class="stat-card">
-                    <div class="text-muted small">Маршрут</div>
+                    <div class="text-muted small">{{ T.gps_route_label }}</div>
                     <div class="fw-semibold">{{ trip.route.origin_city|tr_city:LANG }} → {{ trip.route.destination_city|tr_city:LANG }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
-                    <div class="text-muted small">Транспорт</div>
+                    <div class="text-muted small">{{ T.gps_vehicle_label }}</div>
                     <div class="fw-semibold">{{ trip.vehicle.brand }} {{ trip.vehicle.model }}</div>
                     <div class="small text-muted">{{ trip.vehicle.registration_number }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
-                    <div class="text-muted small">Поточна швидкість</div>
-                    <div class="fw-semibold"><span id="speedValue">,</span> <span class="small">км/год</span></div>
+                    <div class="text-muted small">{{ T.gps_speed_label }}</div>
+                    <div class="fw-semibold"><span id="speedValue">,</span> <span class="small">{{ T.gps_speed_unit }}</span></div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
-                    <div class="text-muted small">До найближчої зупинки</div>
-                    <div class="fw-semibold"><span id="etaValue">,</span> <span class="small">хв</span></div>
+                    <div class="text-muted small">{{ T.gps_eta_label }}</div>
+                    <div class="fw-semibold"><span id="etaValue">,</span> <span class="small">{{ T.gps_eta_unit }}</span></div>
                 </div>
             </div>
         </div>
@@ -136,11 +136,11 @@
         <div class="card p-3 border-0 shadow-sm mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
                 <div>
-                    <div class="text-muted small">Прогрес поїздки</div>
+                    <div class="text-muted small">{{ T.gps_progress_label }}</div>
                     <div class="fw-semibold"><span id="progressValue">0</span>%</div>
                 </div>
                 <div class="text-end">
-                    <div class="text-muted small">Найближча / наступна зупинка</div>
+                    <div class="text-muted small">{{ T.gps_current_next_label }}</div>
                     <div class="fw-semibold"><span id="currentStop">,</span> → <span id="nextStop">,</span></div>
                 </div>
             </div>
@@ -155,7 +155,7 @@
             </div>
             <div class="col-lg-3">
                 <div class="card p-3 border-0 shadow-sm">
-                    <h6 class="text-muted text-uppercase small mb-3">Зупинки</h6>
+                    <h6 class="text-muted text-uppercase small mb-3">{{ T.gps_stops_section }}</h6>
                     <div id="stopsList">
                         {% for s in stops %}
                         <div class="stop-item" data-order="{{ s.order }}">
@@ -174,7 +174,7 @@
 
         <div class="alert alert-info border-0 mt-3 small">
             <i class="bi bi-info-circle"></i>
-            Дані оновлюються кожні 8 секунд. У демо-режимі позиція автобуса розраховується аналітично на основі часу від відправлення та координат зупинок.
+            {{ T.gps_update_info }}
         </div>
     </div>
 </section>
@@ -183,6 +183,21 @@
     window.STOPS_DATA = {{ stops_with_coords_json|safe }};
     window.TRIP_ID = {{ trip.id }};
     window.POSITION_URL = "{% url 'portal:trip_position_api' trip.id %}";
+    // словник рядків для динамічних повідомлень у JS, відповідно до сесії мови
+    window.GPS_T = {
+        no_coords: "{{ T.gps_no_coords|escapejs }}",
+        pending_badge: "{{ T.gps_pending_badge|escapejs }}",
+        future_hint: "{{ T.gps_future_hint|escapejs }}",
+        cancelled_badge: "{{ T.gps_cancelled_badge|escapejs }}",
+        unavailable_badge: "{{ T.gps_unavailable_badge|escapejs }}",
+        finished_status: "{{ T.gps_finished_status|escapejs }}",
+        arrived_badge: "{{ T.gps_arrived_badge|escapejs }}",
+        in_transit_status_prefix: "{{ T.gps_in_transit_status_prefix|escapejs }}",
+        in_transit_badge: "{{ T.gps_in_transit_badge|escapejs }}",
+        arrived_word: "{{ T.gps_arrived_word|escapejs }}",
+        error_status: "{{ T.gps_error_status|escapejs }}",
+        error_badge: "{{ T.gps_error_badge|escapejs }}",
+    };
 </script>
 
 {% endblock %}
@@ -192,9 +207,10 @@
 <script>
 (function() {
     const stops = window.STOPS_DATA;
+    const T = window.GPS_T || {};
     console.log('[GPS] Stops loaded:', stops);
     if (!stops || !stops.length) {
-        document.getElementById('liveStatus').textContent = 'У маршруту немає координат зупинок';
+        document.getElementById('liveStatus').textContent = T.no_coords || 'У маршруту немає координат зупинок';
         return;
     }
 
@@ -458,19 +474,19 @@
             .then(data => {
                 console.log('[GPS] Response:', data);
                 if (data.status === 'pending') {
-                    setStatus(data.message, 'Очікує відправлення', '');
+                    setStatus(data.message, T.pending_badge || 'Очікує відправлення', '');
                     // Автоматична пропозиція demo-режиму
                     if (!demoMode && !window._demoSuggested) {
                         window._demoSuggested = true;
                         const hint = document.createElement('div');
                         hint.className = 'alert alert-warning mt-2 small';
-                        hint.innerHTML = '<i class="bi bi-lightbulb"></i> Цей рейс заплановано на майбутнє. Увімкніть <b>Demo-режим</b> вгорі, щоб побачити симуляцію руху автобуса.';
+                        hint.innerHTML = '<i class="bi bi-lightbulb"></i> ' + (T.future_hint || 'Цей рейс заплановано на майбутнє.');
                         document.querySelector('section.section-sm > .container').prepend(hint);
                     }
                     return;
                 }
                 if (data.status === 'unavailable' || data.status === 'cancelled') {
-                    setStatus(data.message, data.status === 'cancelled' ? 'Скасовано' : 'Недоступно', '');
+                    setStatus(data.message, data.status === 'cancelled' ? (T.cancelled_badge || 'Скасовано') : (T.unavailable_badge || 'Недоступно'), '');
                     return;
                 }
 
@@ -479,12 +495,12 @@
                 document.getElementById('progressValue').textContent = data.progress_percent.toFixed(0);
                 document.getElementById('progressFill').style.width = data.progress_percent + '%';
                 document.getElementById('currentStop').textContent = data.nearest_stop || ',';
-                document.getElementById('nextStop').textContent = data.next_stop || (data.is_finished ? 'прибув' : ',');
+                document.getElementById('nextStop').textContent = data.next_stop || (data.is_finished ? (T.arrived_word || 'прибув') : ',');
 
                 if (data.is_finished) {
-                    setStatus('Рейс завершено', 'Прибув', '');
+                    setStatus(T.finished_status || 'Рейс завершено', T.arrived_badge || 'Прибув', '');
                 } else {
-                    setStatus(`У дорозі, оновлено ${new Date().toLocaleTimeString()}`, 'У дорозі', '');
+                    setStatus(`${T.in_transit_status_prefix || 'У дорозі, оновлено'} ${new Date().toLocaleTimeString()}`, T.in_transit_badge || 'У дорозі', '');
                 }
 
                 // Точне snap-to-road: позиціонуємо автобус ВСЕРЕДИНІ сегменту
@@ -516,7 +532,7 @@
                 updateStopsList(nearestIdx, data.is_finished);
             })
             .catch(() => {
-                setStatus('Помилка зєднання, повтор через 8с...', 'Помилка', '');
+                setStatus(T.error_status || 'Помилка зєднання, повтор через 8с...', T.error_badge || 'Помилка', '');
             });
     }
 

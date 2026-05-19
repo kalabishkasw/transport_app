@@ -25,6 +25,41 @@ class BookingError(Exception):
 User = get_user_model()
 
 
+# мінімальна ціна квитка та округлення для пропорційних сегментів
+MIN_SEGMENT_PRICE = Decimal('5.00')
+PRICE_ROUNDING_STEP = Decimal('0.50')
+
+
+def calculate_segment_price(trip, boarding_stop, alighting_stop):
+    """
+    рахую ціну квитка пропорційно тривалості сегмента від boarding_stop
+    до alighting_stop відносно повної тривалості маршруту.
+
+    приклад: маршрут 12 годин 60 EUR, сегмент 1 година -> 5 EUR.
+    мінімальна ціна = MIN_SEGMENT_PRICE, округлення до 0.50 EUR.
+    """
+    total_duration = trip.route.duration_minutes
+    if not total_duration or total_duration <= 0:
+        return trip.base_price  # fallback: ціна за повний маршрут
+
+    # сегмент: від виїзду з посадки до прибуття у висадку
+    segment_minutes = alighting_stop.arrival_offset_minutes - boarding_stop.departure_offset_minutes
+    if segment_minutes <= 0:
+        return trip.base_price  # некоректний сегмент - повна ціна
+
+    fraction = Decimal(segment_minutes) / Decimal(total_duration)
+    raw = Decimal(trip.base_price) * fraction
+
+    # округлюю до кратного 0.50 EUR
+    steps = (raw / PRICE_ROUNDING_STEP).quantize(Decimal('1'))
+    price = steps * PRICE_ROUNDING_STEP
+
+    # не нижче мінімальної ціни і не вище базової
+    price = max(price, MIN_SEGMENT_PRICE)
+    price = min(price, Decimal(trip.base_price))
+    return price
+
+
 @transaction.atomic
 def create_booking(
     *,
@@ -164,6 +199,8 @@ def create_booking(
     # для кожного квитка окремо (інакше recalculate_total виконається N разів
     # замість одного). signals.recalc_order_total_on_save при bulk_create
     # не викликається - тому далі робимо recalculate_total вручну.
+    # ціна тепер пропорційна до сегмента (не повного маршруту).
+    segment_price = calculate_segment_price(trip, boarding_stop, alighting_stop)
     ticket_objects = [
         Ticket(
             order=order,
@@ -175,7 +212,7 @@ def create_booking(
             seat_number=pd.get('seat_number', '') or '',
             boarding_stop=boarding_stop,
             alighting_stop=alighting_stop,
-            price=trip.base_price,
+            price=segment_price,
             status=Ticket.Status.BOOKED,
         )
         for pd in passengers

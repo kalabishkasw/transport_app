@@ -262,7 +262,7 @@
                             </div>
                             <div class="trip-action">
                                 <div class="trip-price-label">{{ T.card_from }}</div>
-                                <div class="trip-price">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</div>
+                                <div class="trip-price">{{ trip.base_price|price_local:LANG }}</div>
                                 <button class="btn btn-primary btn-sm mt-2">{{ T.card_buy }}</button>
                             </div>
                         </div>

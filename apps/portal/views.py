@@ -405,11 +405,15 @@ def trip_position_api(request, trip_id):
     demo_mode = request.GET.get('demo') == '1'
     pos = simulate_position(trip, demo_mode=demo_mode)
 
+    # мова для повідомлень API. лінгвістично коректний переклад,
+    # включаючи плюралізацію (UA має 3 форми, EN - 2).
+    lang = request.session.get('portal_lang', 'uk')
+
     if pos is None:
         if trip.status == 'cancelled':
             return JsonResponse({
                 'status': 'cancelled',
-                'message': 'Рейс скасовано',
+                'message': 'Trip cancelled' if lang == 'en' else 'Рейс скасовано',
             })
         # немає координат у зупинок або рейс ще не почався.
         now = timezone.now()
@@ -420,22 +424,34 @@ def trip_position_api(request, trip_id):
             hours = (total_minutes % (24 * 60)) // 60
             minutes = total_minutes % 60
             parts = []
-            if days > 0:
-                parts.append(f'{days} {_pluralize_uk(days, "день", "дні", "днів")}')
-            if hours > 0:
-                parts.append(f'{hours} {_pluralize_uk(hours, "година", "години", "годин")}')
-            if minutes > 0 or not parts:
-                parts.append(f'{minutes} {_pluralize_uk(minutes, "хвилина", "хвилини", "хвилин")}')
-            human = ' '.join(parts)
+            if lang == 'en':
+                # англійська плюралізація проста: 1 -> singular, інакше -> plural
+                if days > 0:
+                    parts.append(f'{days} {"day" if days == 1 else "days"}')
+                if hours > 0:
+                    parts.append(f'{hours} {"hour" if hours == 1 else "hours"}')
+                if minutes > 0 or not parts:
+                    parts.append(f'{minutes} {"minute" if minutes == 1 else "minutes"}')
+                human = ' '.join(parts)
+                message = f'Trip starts in {human} (turn on demo mode to see the movement simulation)'
+            else:
+                if days > 0:
+                    parts.append(f'{days} {_pluralize_uk(days, "день", "дні", "днів")}')
+                if hours > 0:
+                    parts.append(f'{hours} {_pluralize_uk(hours, "година", "години", "годин")}')
+                if minutes > 0 or not parts:
+                    parts.append(f'{minutes} {_pluralize_uk(minutes, "хвилина", "хвилини", "хвилин")}')
+                human = ' '.join(parts)
+                message = f'Рейс розпочнеться через {human} (увімкніть demo-режим, щоб побачити симуляцію руху)'
             return JsonResponse({
                 'status': 'pending',
-                'message': f'Рейс розпочнеться через {human} (увімкніть demo-режим, щоб побачити симуляцію руху)',
+                'message': message,
                 'minutes_to_start': total_minutes,
                 'departure_at': trip.departure_at.isoformat(),
             })
         return JsonResponse({
             'status': 'unavailable',
-            'message': 'Маршрут не має координат зупинок',
+            'message': 'Route has no stop coordinates' if lang == 'en' else 'Маршрут не має координат зупинок',
         })
 
     return JsonResponse({
@@ -488,6 +504,28 @@ def booking_form(request, trip_id):
     boarding_options = [s for s in stops if s.can_board]
     alighting_options = [s for s in stops if s.can_alight]
 
+    # дані зупинок для JS-калькулятора ціни сегмента (id + offsets)
+    import json as _json
+    stops_for_price = _json.dumps([
+        {
+            'id': s.id,
+            'departure_offset': s.departure_offset_minutes,
+            'arrival_offset': s.arrival_offset_minutes,
+            'order': s.order,
+        }
+        for s in stops
+    ])
+
+    # курс і символ валюти для JS, відповідно до мови сесії
+    from apps.portal.templatetags.i18n_extras import get_eur_to_uah
+    lang = request.session.get('portal_lang', 'uk')
+    if lang == 'en':
+        currency_rate = 1
+        currency_symbol = 'EUR'
+    else:
+        currency_rate = float(get_eur_to_uah())
+        currency_symbol = 'грн'
+
     lang = request.session.get('portal_lang', 'uk')
 
     if request.method == 'POST':
@@ -519,6 +557,10 @@ def booking_form(request, trip_id):
                 'total_price': trip.base_price * count,
                 'occupied_seats': occupied_seats,
                 'total_seats': trip.vehicle.seats_total or 0,
+                'stops_for_price': stops_for_price,
+                'route_duration_minutes': trip.route.duration_minutes,
+                'currency_rate': currency_rate,
+                'currency_symbol': currency_symbol,
             })
 
         if all_valid:
@@ -601,6 +643,10 @@ def booking_form(request, trip_id):
         'total_price': trip.base_price * count,
         'occupied_seats': occupied_seats,
         'total_seats': trip.vehicle.seats_total or 0,
+        'stops_for_price': stops_for_price,
+        'route_duration_minutes': trip.route.duration_minutes,
+        'currency_rate': currency_rate,
+        'currency_symbol': currency_symbol,
     })
 
 

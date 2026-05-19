@@ -107,7 +107,7 @@
                                 </div>
                                 <div class="trip-action">
                                     <div class="trip-price-label">{{ T.search_price }}</div>
-                                    <div class="trip-price">{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</div>
+                                    <div class="trip-price">{{ trip.base_price|price_local:LANG }}</div>
                                     <button class="btn btn-primary mt-2">
                                         {{ T.common_buy }} <i class="bi bi-arrow-right"></i>
                                     </button>
@@ -159,7 +159,7 @@
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <span class="fw-bold" style="color: var(--primary);">
-                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                                {{ trip.base_price|price_local:LANG }}
                                             </span>
                                             <span class="small text-primary">
                                                 {{ T.common_details }} <i class="bi bi-arrow-right"></i>
@@ -196,7 +196,7 @@
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <span class="fw-bold" style="color: var(--primary);">
-                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                                {{ trip.base_price|price_local:LANG }}
                                             </span>
                                         </div>
                                     </div>
@@ -230,7 +230,7 @@
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <span class="fw-bold" style="color: var(--primary);">
-                                                {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                                                {{ trip.base_price|price_local:LANG }}
                                             </span>
                                         </div>
                                     </div>

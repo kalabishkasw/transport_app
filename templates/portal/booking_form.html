@@ -94,9 +94,15 @@
 </div>
 {% endif %}
 
-<form method="post" id="booking-form" novalidate>
+<form method="post" id="booking-form" novalidate
+      data-base-price="{{ trip.base_price }}"
+      data-total-duration="{{ route_duration_minutes }}"
+      data-min-price="5"
+      data-currency-rate="{{ currency_rate }}"
+      data-currency-symbol="{{ currency_symbol }}">
     {% csrf_token %}
     <input type="hidden" name="count" id="count-input" value="{{ count }}">
+    <script id="stops-price-data" type="application/json">{{ stops_for_price|safe }}</script>
 
     <div class="row g-4">
         <div class="col-lg-8">
@@ -126,7 +132,9 @@
                         </div>
                         <div id="seatmap-grid" class="seatmap-grid"
                              data-total="{{ total_seats }}"
-                             data-count="{{ count }}"></div>
+                             data-count="{{ count }}"
+                             data-tpl-progress="{% if LANG == 'en' %}Selected {n} of {total}. Pick {remaining} more.{% else %}Обрано {n} з {total}. Залишилось обрати ще {remaining}.{% endif %}"
+                             data-tpl-done="{% if LANG == 'en' %}✓ All {total} seats selected{% else %}✓ Усі {total} місць обрано{% endif %}"></div>
                         {{ occupied_seats|json_script:"occupied-seats" }}
                     </div>
                     <div class="seat-legend">
@@ -254,9 +262,9 @@
                     <span class="text-muted">{{ T.bf_summary_date }}</span>
                     <span>{{ trip.departure_at|date:"d.m.Y H:i" }}</span>
                 </div>
-                <div class="d-flex justify-content-between small mb-2">
+                <div class="d-flex justify-content-between small mb-2" id="summary-price-per-row">
                     <span class="text-muted">{{ T.bf_summary_price_per }}</span>
-                    <span>{{ trip.base_price|floatformat:0 }} {{ trip.currency }}</span>
+                    <span id="summary-price-per">{{ trip.base_price|price_local:LANG }}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
                     <span class="text-muted">{{ T.bf_summary_count }}</span>
@@ -288,8 +296,9 @@
                 <div class="d-flex justify-content-between align-items-baseline mb-3">
                     <span>{{ T.bf_total_word }}</span>
                     <div>
-                        <span style="font-size:28px; font-weight:800; color: var(--primary);" id="summary-total">{{ total_price|floatformat:0 }}</span>
-                        <span> {{ trip.currency }}</span>
+                        {# серверний рендер уже у локальній валюті; JS перерахує при зміні зупинок #}
+                        <span style="font-size:28px; font-weight:800; color: var(--primary);" id="summary-total">{{ total_price|price_local:LANG }}</span>
+                        <span id="summary-currency-suffix" style="display:none;"> {{ currency_symbol }}</span>
                     </div>
                 </div>
 
@@ -381,6 +390,76 @@
         window.location.href = url.toString();
     }
 
+    // ----- Динамічний перерахунок ціни залежно від обраних посадки/висадки -----
+    // Так само як на серверній стороні: price = base * (alighting.arrival - boarding.departure) / total_duration
+    // округлюємо до 0.50 і ставимо мінімум 5.
+    (function() {
+        const form = document.getElementById('booking-form');
+        const dataEl = document.getElementById('stops-price-data');
+        if (!form || !dataEl) return;
+        let stopsData;
+        try {
+            stopsData = JSON.parse(dataEl.textContent || '[]');
+        } catch (e) {
+            return;
+        }
+        const basePrice = parseFloat(form.dataset.basePrice);
+        const totalDuration = parseFloat(form.dataset.totalDuration);
+        const minPrice = parseFloat(form.dataset.minPrice || '5');
+        const currencyRate = parseFloat(form.dataset.currencyRate || '1');
+        const currencySymbol = form.dataset.currencySymbol || 'EUR';
+
+        function fmtPrice(eurAmount) {
+            // конвертує EUR-amount у локальну валюту і форматує
+            const local = eurAmount * currencyRate;
+            // якщо UAH (rate > 5), показуємо без копійок; для EUR з 2 знаками
+            const decimals = currencyRate > 5 ? 0 : 2;
+            return `${local.toFixed(decimals)} ${currencySymbol}`;
+        }
+
+        const boardSel = form.querySelector('select[name="boarding_stop"]');
+        const alightSel = form.querySelector('select[name="alighting_stop"]');
+        const countInput = document.getElementById('count-input');
+        const pricePerEl = document.querySelector('.col-lg-4 .small.mb-2 + .mt-3') ? null : null;
+
+        // елементи у sidebar з ціною
+        const pricePerEl = document.getElementById('summary-price-per');
+        const totalEl = document.getElementById('summary-total');
+
+        function calcSegmentPrice(boardingId, alightingId) {
+            const board = stopsData.find(s => String(s.id) === String(boardingId));
+            const alight = stopsData.find(s => String(s.id) === String(alightingId));
+            if (!board || !alight || !totalDuration) return basePrice;
+            const segMin = alight.arrival_offset - board.departure_offset;
+            if (segMin <= 0) return basePrice;
+            let p = basePrice * (segMin / totalDuration);
+            // округлення до кратного 0.50
+            p = Math.round(p * 2) / 2;
+            p = Math.max(p, minPrice);
+            p = Math.min(p, basePrice);
+            return p;
+        }
+
+        function refreshPrice() {
+            const bId = boardSel ? boardSel.value : '';
+            const aId = alightSel ? alightSel.value : '';
+            const count = parseInt(countInput.value || '1', 10);
+            if (!bId || !aId) {
+                // без вибору показуємо базову ціну за повний маршрут
+                if (pricePerEl) pricePerEl.textContent = fmtPrice(basePrice);
+                if (totalEl) totalEl.textContent = fmtPrice(basePrice * count);
+                return;
+            }
+            const perTicket = calcSegmentPrice(bId, aId);
+            if (pricePerEl) pricePerEl.textContent = fmtPrice(perTicket);
+            if (totalEl) totalEl.textContent = fmtPrice(perTicket * count);
+        }
+
+        if (boardSel) boardSel.addEventListener('change', refreshPrice);
+        if (alightSel) alightSel.addEventListener('change', refreshPrice);
+        refreshPrice();
+    })();
+
     // ----- Інтерактивна схема місць -----
     (function() {
         const grid = document.getElementById('seatmap-grid');
@@ -448,11 +527,17 @@
             });
             const remaining = requiredCount - selected.length;
             if (hint) {
+                // шаблони рядків приходять з data-* атрибутів grid, мовно-залежні
+                const tplProgress = grid.dataset.tplProgress || 'Обрано {n} з {total}. Залишилось обрати ще {remaining}.';
+                const tplDone = grid.dataset.tplDone || '✓ Усі {total} місць обрано';
                 if (remaining > 0) {
-                    hint.textContent = `Обрано ${selected.length} з ${requiredCount}. Залишилось обрати ще ${remaining}.`;
+                    hint.textContent = tplProgress
+                        .replace('{n}', selected.length)
+                        .replace('{total}', requiredCount)
+                        .replace('{remaining}', remaining);
                     hint.style.color = 'var(--muted)';
                 } else {
-                    hint.textContent = `✓ Усі ${requiredCount} місць обрано`;
+                    hint.textContent = tplDone.replace('{total}', requiredCount);
                     hint.style.color = 'var(--success)';
                 }
             }

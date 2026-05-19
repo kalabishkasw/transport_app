@@ -9,13 +9,59 @@
     {% load i18n_extras %}
     {{ trip.route.origin_city|tr_city:LANG }}
 """
+import json
+import logging
+from decimal import Decimal
+from urllib.request import urlopen
+
 from django import template
+from django.core.cache import cache
 
 register = template.Library()
+logger = logging.getLogger(__name__)
+
+
+# курс конверсії: припускаємо що всі ціни у БД зберігаються у EUR.
+# для UA відображення множимо на актуальний курс і показуємо у грн.
+# для EN залишаємо як є (EUR).
+EUR_TO_UAH_FALLBACK = Decimal('51.8')
+NBU_EUR_URL = 'https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=EUR&json'
+RATE_CACHE_KEY = 'nbu_eur_to_uah_v1'
+RATE_CACHE_TTL = 60 * 60 * 24  # 24 години
+
+
+def get_eur_to_uah():
+    """
+    повертає актуальний курс EUR -> UAH від НБУ. Кешує на 24 години.
+    при будь-якій помилці (нема інтернету, NBU не відповідає, формат не той)
+    повертає fallback значення.
+    """
+    cached = cache.get(RATE_CACHE_KEY)
+    if cached is not None:
+        try:
+            return Decimal(str(cached))
+        except Exception:
+            pass
+
+    try:
+        with urlopen(NBU_EUR_URL, timeout=3) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        if data and isinstance(data, list) and 'rate' in data[0]:
+            rate = Decimal(str(data[0]['rate']))
+            cache.set(RATE_CACHE_KEY, str(rate), RATE_CACHE_TTL)
+            return rate
+    except Exception:
+        logger.warning('Не вдалося отримати курс НБУ, використовую fallback %s', EUR_TO_UAH_FALLBACK)
+
+    # кешую fallback на 1 годину щоб у разі довгих проблем з NBU
+    # не довбати їх на кожен запит
+    cache.set(RATE_CACHE_KEY, str(EUR_TO_UAH_FALLBACK), 60 * 60)
+    return EUR_TO_UAH_FALLBACK
 
 
 # назви міст: UA → EN. невідомі повертаються як є.
 CITY_NAMES_EN = {
+    # Україна
     'Ужгород': 'Uzhhorod',
     'Львів': 'Lviv',
     'Київ': 'Kyiv',
@@ -27,29 +73,65 @@ CITY_NAMES_EN = {
     'Луцьк': 'Lutsk',
     'Рівне': 'Rivne',
     'Мукачево': 'Mukachevo',
+    'Чоп': 'Chop',
+    'Дніпро': 'Dnipro',
+    'Житомир': 'Zhytomyr',
+    'Вінниця': 'Vinnytsia',
+    'Хмельницький': 'Khmelnytskyi',
+    'Запоріжжя': 'Zaporizhzhia',
+    'Полтава': 'Poltava',
+    'Суми': 'Sumy',
+    # Молдова
     'Кишинів': 'Chișinău',
     'Бельці': 'Bălți',
+    # Словаччина
     'Кошице': 'Košice',
     'Братислава': 'Bratislava',
     'Прешов': 'Prešov',
+    'Жиліна': 'Žilina',
+    'Тренчин': 'Trenčín',
+    'Нітра': 'Nitra',
+    'Банська Бистриця': 'Banská Bystrica',
+    # Чехія
     'Прага': 'Prague',
     'Брно': 'Brno',
     'Острава': 'Ostrava',
+    'Пльзень': 'Plzeň',
+    # Польща
     'Варшава': 'Warsaw',
     'Краків': 'Kraków',
     'Вроцлав': 'Wrocław',
     'Познань': 'Poznań',
     'Люблін': 'Lublin',
     'Жешув': 'Rzeszów',
+    'Гданськ': 'Gdańsk',
+    'Катовиці': 'Katowice',
+    # Німеччина
     'Берлін': 'Berlin',
     'Мюнхен': 'Munich',
     'Дрезден': 'Dresden',
+    'Гамбург': 'Hamburg',
+    'Франкфурт': 'Frankfurt',
+    'Кельн': 'Cologne',
+    # Угорщина
     'Будапешт': 'Budapest',
     'Дебрецен': 'Debrecen',
+    'Сегед': 'Szeged',
+    'Мішкольц': 'Miskolc',
+    'Захонь': 'Záhony',
+    # Австрія
     'Відень': 'Vienna',
     'Зальцбург': 'Salzburg',
     'Грац': 'Graz',
+    'Лінц': 'Linz',
+    # Румунія
     'Бухарест': 'Bucharest',
+    'Сучава': 'Suceava',
+    'Брашов': 'Brașov',
+    'Клуж-Напока': 'Cluj-Napoca',
+    'Тімішоара': 'Timișoara',
+    'Ясси': 'Iași',
+    # Інші
     'Софія': 'Sofia',
     'Загреб': 'Zagreb',
     'Любляна': 'Ljubljana',
@@ -235,3 +317,40 @@ def tr_review_comment(value, lang='uk'):
     if lang == 'en' and value:
         return REVIEW_COMMENT_EN.get(value, value)
     return value
+
+
+@register.filter
+def price_local(amount, lang='uk'):
+    """
+    форматує ціну з конверсією за мовою.
+    припускаю що amount у БД зберігається у EUR (базова валюта).
+    UA: множу на актуальний курс НБУ і показую у грн (без копійок).
+    EN: показую у EUR (без копійок).
+    """
+    if amount is None or amount == '':
+        return ''
+    try:
+        amount = Decimal(str(amount))
+    except (TypeError, ValueError):
+        return str(amount)
+    if lang == 'en':
+        return f'{amount:.0f} EUR'
+    rate = get_eur_to_uah()
+    uah = (amount * rate).quantize(Decimal('1'))
+    return f'{uah:.0f} грн'
+
+
+@register.filter
+def price_local_2(amount, lang='uk'):
+    """так само як price_local але з 2 знаками після коми (для знижок)."""
+    if amount is None or amount == '':
+        return ''
+    try:
+        amount = Decimal(str(amount))
+    except (TypeError, ValueError):
+        return str(amount)
+    if lang == 'en':
+        return f'{amount:.2f} EUR'
+    rate = get_eur_to_uah()
+    uah = (amount * rate).quantize(Decimal('0.01'))
+    return f'{uah:.2f} грн'

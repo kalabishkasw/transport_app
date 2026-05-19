@@ -67,7 +67,7 @@
                         </div>
                     </div>
                     <div class="text-end">
-                        <div class="fw-semibold mb-1">{{ t.price|floatformat:0 }} {{ order.currency }}</div>
+                        <div class="fw-semibold mb-1">{{ t.price|price_local:LANG }}</div>
                         <span class="pill">{{ t.status|tr_ticket_status:LANG }}</span>
                         <div class="mt-1">
                             <a href="{% url 'documents:ticket_pdf' t.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -97,9 +97,8 @@
                     <span>{{ T.bd2_to_pay_word }}</span>
                     <div>
                         <span style="font-size:24px; font-weight:800; color:var(--primary);">
-                            {{ order.total_price|floatformat:0 }}
+                            {{ order.total_price|price_local:LANG }}
                         </span>
-                        <span> {{ order.currency }}</span>
                     </div>
                 </div>
             </div>

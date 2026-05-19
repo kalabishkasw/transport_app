@@ -210,7 +210,7 @@
                 <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
                     <div class="text-muted small">{{ T.trip_price_per_ticket }}</div>
                     <div style="font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1;">
-                        {{ trip.base_price|floatformat:0 }} {{ trip.currency }}
+                        {{ trip.base_price|price_local:LANG }}
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
