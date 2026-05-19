@@ -348,7 +348,7 @@
             .navbar-public .auth-link { padding: 5px 8px; min-width: 32px; }
         }
 
-        /* ====== City autocomplete ====== */
+        /* City autocomplete  */
         .city-autocomplete { position: relative; }
         .city-autocomplete .form-control { padding-left: 40px; }
         .city-autocomplete .city-icon {
@@ -405,7 +405,7 @@
         .flatpickr-input + .flatpickr-mobile,
         .flatpickr-input ~ .form-control { cursor: pointer; }
 
-        /* ========== Motion Design ========== */
+        /*  Motion Design  */
 
         /* Глобальний плавний transition для багатьох елементів */
         .btn, .card, .form-control, .form-select, .feature-box, .testimonial-card, .pill, .nav-link-public {
@@ -514,7 +514,7 @@
         /* Легкий scroll behavior */
         html { scroll-behavior: smooth; }
 
-        /* ----- Motion design ----- */
+        /* Motion design  */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: none; }
@@ -775,7 +775,7 @@
                 minDate: 'today',
                 showMonths: window.innerWidth >= 992 ? 2 : 1,
                 disableMobile: true,
-                // Перевизначаємо форматування ТІЛЬКИ для українського відображення поля.
+                // Перевизначаємо форматування тільки для українського відображення поля.
                 // Календар (заголовок місяця) залишається у називному відмінку через locale.
                 formatDate: lang === 'uk' ? (date, format) => {
                     if (format === 'j F Y') {
@@ -788,7 +788,7 @@
         });
     });
 
-    // ===== City autocomplete =====
+    //  City autocomplete
     window.setupCityAutocomplete = function(input, cities) {
         const wrap = input.closest('.city-autocomplete');
         if (!wrap) return;

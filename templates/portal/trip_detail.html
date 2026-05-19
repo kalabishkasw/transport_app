@@ -1,7 +1,8 @@
 {% extends 'portal/base.html' %}
 {% load transport_extras %}
+{% load i18n_extras %}
 
-{% block title %}{{ trip.route.name }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
+{% block title %}{{ trip.route.origin_city|tr_city:LANG }} - {{ trip.route.destination_city|tr_city:LANG }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
 
 {% block extra_head %}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -29,7 +30,7 @@
                 <div class="card p-4 border-0 shadow-sm">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h2 class="mb-1">{{ trip.route.name }}</h2>
+                            <h2 class="mb-1">{{ trip.route.origin_city|tr_city:LANG }} - {{ trip.route.destination_city|tr_city:LANG }}</h2>
                             <div class="text-muted">
                                 <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d F Y" }}
                                 &nbsp; · &nbsp;
@@ -71,7 +72,7 @@
                             <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
                                  style="width:32px; height:32px; flex:none; font-size:14px;">{{ s.order }}</div>
                             <div class="flex-grow-1">
-                                <div class="fw-semibold">{{ s.city }} <span class="text-muted small">({{ s.country }})</span></div>
+                                <div class="fw-semibold">{{ s.city|tr_city:LANG }} <span class="text-muted small">({{ s.country }})</span></div>
                                 {% if s.station_name %}<div class="small text-muted">{{ s.station_name }}</div>{% endif %}
                             </div>
                             <div class="text-end small">
@@ -110,8 +111,8 @@
                             </div>
                             <div style="color:#f59e0b;">{{ r.stars }}</div>
                         </div>
-                        {% if r.title %}<div class="fw-semibold small mb-1">{{ r.title }}</div>{% endif %}
-                        <div class="small">{{ r.comment|linebreaksbr }}</div>
+                        {% if r.title %}<div class="fw-semibold small mb-1">{{ r.title|tr_review_title:LANG }}</div>{% endif %}
+                        <div class="small">{{ r.comment|tr_review_comment:LANG|linebreaksbr }}</div>
                         <div class="small text-muted mt-1">{{ r.created_at|date:"d.m.Y" }}</div>
                     </div>
                     {% endfor %}

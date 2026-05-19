@@ -1,5 +1,6 @@
 {% extends 'portal/base.html' %}
 {% load transport_extras %}
+{% load i18n_extras %}
 
 {% block title %}Відстеження рейсу {{ trip.route.code }} {{ trip.departure_at|date:"d.m.Y" }} | TransAuto Travel{% endblock %}
 
@@ -108,7 +109,7 @@
             <div class="col-6 col-md-3">
                 <div class="stat-card">
                     <div class="text-muted small">Маршрут</div>
-                    <div class="fw-semibold">{{ trip.route.origin_city }} → {{ trip.route.destination_city }}</div>
+                    <div class="fw-semibold">{{ trip.route.origin_city|tr_city:LANG }} → {{ trip.route.destination_city|tr_city:LANG }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
@@ -159,7 +160,7 @@
                         {% for s in stops %}
                         <div class="stop-item" data-order="{{ s.order }}">
                             <div>
-                                <div class="fw-semibold">{{ s.city }}</div>
+                                <div class="fw-semibold">{{ s.city|tr_city:LANG }}</div>
                                 <div class="small text-muted">
                                     {{ trip.departure_at|add_minutes:s.departure_offset_minutes|date:"d.m H:i" }}
                                 </div>

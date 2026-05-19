@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}Оплата замовлення {{ order.order_number }} | TransAuto Travel{% endblock %}
 
@@ -113,7 +114,7 @@
                         </div>
                         <div class="d-flex justify-content-between mb-1">
                             <span>Маршрут</span>
-                            <span class="text-end">{{ order.trip.route.name }}</span>
+                            <span class="text-end">{{ order.trip.route.origin_city|tr_city:LANG }} - {{ order.trip.route.destination_city|tr_city:LANG }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-1">
                             <span>Дата</span>

@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}{{ T.bd2_order_word }} {{ order.order_number }} | TransAuto Travel{% endblock %}
 
@@ -21,7 +22,7 @@
                         <h2 class="mb-1">{{ order.order_number }}</h2>
                         <div class="text-muted small">{{ T.bd2_created_at }} {{ order.created_at|date:"d.m.Y H:i" }}</div>
                     </div>
-                    <span class="pill">{{ order.get_status_display }}</span>
+                    <span class="pill">{{ order.status|tr_order_status:LANG }}</span>
                 </div>
             </div>
 
@@ -32,12 +33,12 @@
                         <div class="trip-route">
                             <div>
                                 <div class="trip-time">{{ order.trip.departure_at|date:"H:i" }}</div>
-                                <div class="trip-time-label">{{ order.trip.route.origin_city }}</div>
+                                <div class="trip-time-label">{{ order.trip.route.origin_city|tr_city:LANG }}</div>
                             </div>
                             <div class="trip-arrow"></div>
                             <div class="text-end">
                                 <div class="trip-time">{{ order.trip.arrival_at|date:"H:i" }}</div>
-                                <div class="trip-time-label">{{ order.trip.route.destination_city }}</div>
+                                <div class="trip-time-label">{{ order.trip.route.destination_city|tr_city:LANG }}</div>
                             </div>
                         </div>
                     </div>
@@ -58,16 +59,16 @@
                     <div>
                         <div class="fw-semibold">{{ t.passenger_last_name }} {{ t.passenger_first_name }}</div>
                         <div class="small text-muted">
-                            № {{ t.ticket_number }} · {{ t.boarding_stop.city }} → {{ t.alighting_stop.city }}
+                            № {{ t.ticket_number }} · {{ t.boarding_stop.city|tr_city:LANG }} → {{ t.alighting_stop.city|tr_city:LANG }}
                             {% if t.seat_number %} · {{ T.bd2_seat_word }} {{ t.seat_number }}{% endif %}
                         </div>
                         <div class="small text-muted">
-                            {{ t.get_document_type_display }}: {{ t.document_number }}
+                            {{ t.document_type|tr_doc_type:LANG }}: {{ t.document_number }}
                         </div>
                     </div>
                     <div class="text-end">
                         <div class="fw-semibold mb-1">{{ t.price|floatformat:0 }} {{ order.currency }}</div>
-                        <span class="pill">{{ t.get_status_display }}</span>
+                        <span class="pill">{{ t.status|tr_ticket_status:LANG }}</span>
                         <div class="mt-1">
                             <a href="{% url 'documents:ticket_pdf' t.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-download"></i> {{ T.bd2_pdf_ticket }}
@@ -89,7 +90,7 @@
                 </div>
                 <div class="d-flex justify-content-between mb-2 small">
                     <span class="text-muted">{{ T.bd2_payment_method }}</span>
-                    <span>{{ order.get_payment_method_display|default:T.bd2_not_set }}</span>
+                    <span>{% if order.payment_method %}{{ order.payment_method|tr_payment_method:LANG }}{% else %}{{ T.bd2_not_set }}{% endif %}</span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between align-items-baseline">
@@ -181,7 +182,7 @@
             </div>
             <div class="modal-body">
                 <p>{{ T.bd2_modal_text_intro }} <b>{{ order.order_number }}</b> {{ T.bd2_modal_text_route }}
-                   <b>{{ order.trip.route.name }}</b> ({{ order.trip.departure_at|date:"d.m.Y H:i" }}).</p>
+                   <b>{{ order.trip.route.origin_city|tr_city:LANG }} → {{ order.trip.route.destination_city|tr_city:LANG }}</b> ({{ order.trip.departure_at|date:"d.m.Y H:i" }}).</p>
                 <p class="text-muted small mb-0">{{ T.bd2_modal_refund_note }}</p>
             </div>
             <div class="modal-footer">

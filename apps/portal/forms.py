@@ -122,6 +122,25 @@ class ClientRegisterForm(forms.Form):
         return user
 
 
+# перекладені варіанти choices для документів і типів квитків.
+# Django зберігає вибір як одне значення (наприклад 'passport'), але label
+# бере з Ticket.DocumentType.choices - там тільки українська. Тому при lang='en'
+# я переписую choices у PassengerForm.__init__.
+DOC_TYPE_CHOICES_EN = [
+    ('passport', 'International passport'),
+    ('id_card', 'ID card'),
+    ('driving', "Driver's license"),
+    ('birth', 'Birth certificate'),
+]
+PRICE_TYPE_CHOICES_EN = [
+    ('adult', 'Adult'),
+    ('child', 'Child'),
+    ('student', 'Student'),
+    ('senior', 'Senior'),
+    ('disabled', 'Disabled'),
+]
+
+
 class PassengerForm(forms.Form):
     """дані одного пасажира."""
     last_name = forms.CharField(
@@ -156,6 +175,14 @@ class PassengerForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '—'}),
     )
+
+    def __init__(self, *args, lang='uk', **kwargs):
+        super().__init__(*args, **kwargs)
+        # якщо мова en, підмінюю choices на англомовні щоб у dropdown
+        # було "International passport" замість "Закордонний паспорт"
+        if lang == 'en':
+            self.fields['document_type'].choices = DOC_TYPE_CHOICES_EN
+            self.fields['price_type'].choices = PRICE_TYPE_CHOICES_EN
 
     def clean_seat_number(self):
         """перевіряю що номер місця - це число (1-3 цифри).

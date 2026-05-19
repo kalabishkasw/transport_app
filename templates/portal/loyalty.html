@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}{{ T.lp_title }} | TransAuto Travel{% endblock %}
 
@@ -127,7 +128,7 @@
                 <tbody>
                     {% for o in completed_orders %}
                     <tr>
-                        <td><b>{{ o.trip.route.name }}</b></td>
+                        <td><b>{{ o.trip.route.origin_city|tr_city:LANG }} - {{ o.trip.route.destination_city|tr_city:LANG }}</b></td>
                         <td>{{ o.trip.departure_at|date:"d.m.Y" }}</td>
                         <td><a href="{% url 'portal:booking_detail' o.id %}">{{ o.order_number }}</a></td>
                         <td class="text-end">{{ o.total_price|floatformat:0 }} {{ o.currency }}</td>

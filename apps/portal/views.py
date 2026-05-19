@@ -488,6 +488,8 @@ def booking_form(request, trip_id):
     boarding_options = [s for s in stops if s.can_board]
     alighting_options = [s for s in stops if s.can_alight]
 
+    lang = request.session.get('portal_lang', 'uk')
+
     if request.method == 'POST':
         try:
             count = int(request.POST.get('count', '1'))
@@ -497,7 +499,7 @@ def booking_form(request, trip_id):
 
         contact_form = BookingContactForm(request.POST)
         passenger_forms = [
-            PassengerForm(request.POST, prefix=f'p{i}')
+            PassengerForm(request.POST, prefix=f'p{i}', lang=lang)
             for i in range(count)
         ]
         all_valid = contact_form.is_valid() and all(f.is_valid() for f in passenger_forms)
@@ -585,7 +587,7 @@ def booking_form(request, trip_id):
             }
 
         contact_form = BookingContactForm(initial=contact_initial)
-        passenger_forms = [PassengerForm(prefix=f'p{i}') for i in range(count)]
+        passenger_forms = [PassengerForm(prefix=f'p{i}', lang=lang) for i in range(count)]
 
     return render(request, 'portal/booking_form.html', {
         'trip': trip,

@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}{{ T.rv_title }} | TransAuto Travel{% endblock %}
 
@@ -35,7 +36,7 @@
         </a>
         <h3 class="mt-2 mb-1">{{ T.rv_title }}</h3>
         <div class="text-muted small mb-3">
-            {{ order.trip.route.name }} ({{ order.trip.departure_at|date:"d.m.Y" }})
+            {{ order.trip.route.origin_city|tr_city:LANG }} - {{ order.trip.route.destination_city|tr_city:LANG }} ({{ order.trip.departure_at|date:"d.m.Y" }})
         </div>
 
         {% if existing %}

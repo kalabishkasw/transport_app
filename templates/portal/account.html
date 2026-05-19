@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}{{ T.nav_account }} | TransAuto Travel{% endblock %}
 
@@ -59,19 +60,19 @@
                             <div class="trip-route">
                                 <div>
                                     <div class="trip-time">{{ o.trip.departure_at|date:"H:i" }}</div>
-                                    <div class="trip-time-label">{{ o.trip.route.origin_city }}</div>
+                                    <div class="trip-time-label">{{ o.trip.route.origin_city|tr_city:LANG }}</div>
                                 </div>
                                 <div class="trip-arrow"></div>
                                 <div class="text-end">
                                     <div class="trip-time">{{ o.trip.arrival_at|date:"H:i" }}</div>
-                                    <div class="trip-time-label">{{ o.trip.route.destination_city }}</div>
+                                    <div class="trip-time-label">{{ o.trip.route.destination_city|tr_city:LANG }}</div>
                                 </div>
                             </div>
                             <div class="trip-meta">
                                 <span><i class="bi bi-calendar3"></i> {{ o.trip.departure_at|date:"d.m.Y" }}</span>
                                 <span><i class="bi bi-receipt"></i> {{ o.order_number }}</span>
                                 <span><i class="bi bi-people"></i> {{ o.tickets_total }} {{ T.common_tickets_label }}</span>
-                                <span class="pill">{{ o.get_status_display }}</span>
+                                <span class="pill">{{ o.status|tr_order_status:LANG }}</span>
                             </div>
                         </div>
                         <div class="trip-action">
@@ -106,11 +107,11 @@
                         <div class="trip-route">
                             <div>
                                 <div class="trip-time">{{ o.trip.departure_at|date:"d.m.Y" }}</div>
-                                <div class="trip-time-label">{{ o.trip.route.origin_city }}</div>
+                                <div class="trip-time-label">{{ o.trip.route.origin_city|tr_city:LANG }}</div>
                             </div>
                             <div class="trip-arrow"></div>
                             <div class="text-end">
-                                <div class="trip-time-label">{{ o.trip.route.destination_city }}</div>
+                                <div class="trip-time-label">{{ o.trip.route.destination_city|tr_city:LANG }}</div>
                             </div>
                         </div>
                         <div class="trip-meta">

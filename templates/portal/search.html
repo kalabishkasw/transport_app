@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load i18n_extras %}
 
 {% block title %}{{ T.search_title }} | TransAuto Travel{% endblock %}
 
@@ -87,12 +88,12 @@
                                     <div class="trip-route">
                                         <div>
                                             <div class="trip-time">{{ trip.departure_at|date:"H:i" }}</div>
-                                            <div class="trip-time-label">{{ trip.route.origin_city }}</div>
+                                            <div class="trip-time-label">{{ trip.route.origin_city|tr_city:LANG }}</div>
                                         </div>
                                         <div class="trip-arrow"></div>
                                         <div class="text-end">
                                             <div class="trip-time">{{ trip.arrival_at|date:"H:i" }}</div>
-                                            <div class="trip-time-label">{{ trip.route.destination_city }}</div>
+                                            <div class="trip-time-label">{{ trip.route.destination_city|tr_city:LANG }}</div>
                                         </div>
                                     </div>
                                     <div class="trip-meta">
@@ -150,7 +151,7 @@
                                             <span class="text-muted small">{{ trip.departure_at|date:"H:i" }}</span>
                                         </div>
                                         <div class="fw-semibold text-dark">
-                                            {{ trip.route.origin_city }} → {{ trip.route.destination_city }}
+                                            {{ trip.route.origin_city|tr_city:LANG }} → {{ trip.route.destination_city|tr_city:LANG }}
                                         </div>
                                         <div class="small text-muted">
                                             <i class="bi bi-clock"></i> {{ trip.route.duration_hours }} {{ T.search_hours_short }} ·
@@ -191,7 +192,7 @@
                                             <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y H:i" }}
                                         </div>
                                         <div class="fw-semibold text-dark mb-1">
-                                            {{ trip.route.origin_city }} →<br>{{ trip.route.destination_city }}
+                                            {{ trip.route.origin_city|tr_city:LANG }} →<br>{{ trip.route.destination_city|tr_city:LANG }}
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <span class="fw-bold" style="color: var(--primary);">
@@ -225,7 +226,7 @@
                                             <i class="bi bi-calendar3"></i> {{ trip.departure_at|date:"d.m.Y H:i" }}
                                         </div>
                                         <div class="fw-semibold text-dark mb-1">
-                                            {{ trip.route.origin_city }} →<br>{{ trip.route.destination_city }}
+                                            {{ trip.route.origin_city|tr_city:LANG }} →<br>{{ trip.route.destination_city|tr_city:LANG }}
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <span class="fw-bold" style="color: var(--primary);">

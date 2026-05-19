@@ -1,5 +1,6 @@
 {% extends 'portal/base.html' %}
 {% load static %}
+{% load i18n_extras %}
 
 {% block title %}TransAuto Travel — міжнародні автобусні рейси з України до Європи{% endblock %}
 
@@ -245,12 +246,12 @@
                                 <div class="trip-route">
                                     <div>
                                         <div class="trip-time">{{ trip.departure_at|date:"H:i" }}</div>
-                                        <div class="trip-time-label">{{ trip.route.origin_city }}</div>
+                                        <div class="trip-time-label">{{ trip.route.origin_city|tr_city:LANG }}</div>
                                     </div>
                                     <div class="trip-arrow"></div>
                                     <div class="text-end">
                                         <div class="trip-time">{{ trip.arrival_at|date:"H:i" }}</div>
-                                        <div class="trip-time-label">{{ trip.route.destination_city }}</div>
+                                        <div class="trip-time-label">{{ trip.route.destination_city|tr_city:LANG }}</div>
                                     </div>
                                 </div>
                                 <div class="trip-meta">
@@ -522,7 +523,7 @@
 
 {% block extra_scripts %}
 <script>
-    // ----- Кастомний date-picker з стрілками і дружнім форматом -----
+    //  Кастомний date-picker з стрілками і дружнім форматом
     // Перевизначаємо flatpickr на цьому полі: показуємо "Сьогодні", "Завтра",
     // "Вчора" або "DD MMM". Стрілки прокидають дату на ±1 день.
     (function() {
@@ -551,8 +552,8 @@
             return `${DAYS_SHORT[d.getDay()]}, ${dateStr}`;
         }
 
-        // Чекаємо щоб flatpickr ініціалізувався (з base.html DOMContentLoaded),
-        // потім перевизначаємо його formatDate для цього інпуту.
+        // Чекаю щоб flatpickr ініціалізувався (з base.html DOMContentLoaded),
+        // потім перевизначаю його formatDate для цього інпуту.
         function tryWire() {
             if (!input._flatpickr) {
                 setTimeout(tryWire, 50);
@@ -591,7 +592,7 @@
         document.querySelector('.date-next')?.addEventListener('click', () => shiftDate(1));
     })();
 
-    // ----- Анімовані лічильники у секції стат -----
+    //  Анімовані лічильники у секції стат
     function animateStat(el) {
         const target = parseFloat(el.dataset.stat || '0');
         const duration = 1400;
@@ -606,7 +607,7 @@
         requestAnimationFrame(tick);
     }
 
-    // ----- Reveal-анімація при скролі -----
+    //  Reveal-анімація при скролі
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
