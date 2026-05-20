@@ -52,19 +52,18 @@ class AutoUpdateTripStatusMiddleware:
         return self.get_response(request)
 
     def _maybe_run_update(self):
-        last_run = cache.get(AUTO_UPDATE_LOCK_KEY)
         now = timezone.now()
-        if last_run is not None:
-
-            try:
-                if (now - last_run).total_seconds() < AUTO_UPDATE_INTERVAL_SECONDS:
-                    return
-            except TypeError:
-                # last_run може бути не datetime
-                pass
-
-        # ставлю мітку ВПЕРЕД виконання, щоб паралельні запити не запускали те саме
-        cache.set(AUTO_UPDATE_LOCK_KEY, now, AUTO_UPDATE_INTERVAL_SECONDS * 2)
+        # cache.add атомарний: повертає True тільки першому хто додав ключ,
+        # іншим повертає False доки ключ не протух. на відміну від get+set
+        # тут немає вікна між читанням і записом, у яке могли б проскочити
+        # два паралельних запити одночасно.
+        acquired = cache.add(
+            AUTO_UPDATE_LOCK_KEY,
+            now,
+            AUTO_UPDATE_INTERVAL_SECONDS,
+        )
+        if not acquired:
+            return
 
         try:
             self._update_trip_statuses(now)

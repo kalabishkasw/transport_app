@@ -5,12 +5,16 @@
 - лист-підтвердження клієнту після створення замовлення.
 """
 import logging
-from decimal import Decimal
+import smtplib
+from decimal import Decimal, InvalidOperation
+from socket import error as SocketError
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import DatabaseError
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+from django.template.exceptions import TemplateDoesNotExist
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -66,8 +70,17 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
         # кількість балів = total_price * LOYALTY_POINTS_PER_EUR (з settings).
         # за замовчуванням 1 EUR = 1 бал.
         points_per_eur = getattr(settings, 'LOYALTY_POINTS_PER_EUR', 1)
-        points = int(instance.total_price * points_per_eur)
+        try:
+            points = int(instance.total_price * points_per_eur)
+        except (TypeError, ValueError, InvalidOperation):
+            logger.warning(
+                'Замовлення %s має некоректний total_price, бали не нараховано',
+                instance.order_number,
+            )
+            return
         if points > 0:
+            # звужені винятки: DatabaseError - БД відмовила,
+            # AttributeError - created_by не має поля loyalty_points
             try:
                 user = instance.created_by
                 user.loyalty_points = (user.loyalty_points or 0) + points
@@ -79,7 +92,7 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
                     'Нараховано %s балів лояльності користувачу %s за замовлення %s',
                     points, user.pk, instance.order_number,
                 )
-            except Exception:
+            except (DatabaseError, AttributeError):
                 logger.exception(
                     'Не вдалося нарахувати бали лояльності для замовлення %s',
                     instance.order_number,
@@ -88,7 +101,10 @@ def award_loyalty_points_on_completion(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Order)
 def send_order_confirmation_email(sender, instance, created, **kwargs):
-    """лист-підтвердження клієнту після створення замовлення."""
+    """лист-підтвердження клієнту після створення замовлення.
+    звужені винятки: SMTPException - SMTP-сервер відмовив,
+    SocketError - мережа недоступна, TemplateDoesNotExist - відсутній шаблон.
+    OSError додано для випадків коли SMTP сокет закривається."""
     if not created or not instance.contact_email:
         return
     try:
@@ -113,7 +129,7 @@ def send_order_confirmation_email(sender, instance, created, **kwargs):
             'Лист-підтвердження для замовлення %s надіслано на %s',
             instance.order_number, instance.contact_email,
         )
-    except Exception:
+    except (smtplib.SMTPException, SocketError, OSError, TemplateDoesNotExist):
         logger.exception(
             'Помилка відправки листа-підтвердження для замовлення %s на адресу %s',
             instance.order_number, instance.contact_email,

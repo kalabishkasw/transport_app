@@ -62,7 +62,13 @@ class SearchForm(forms.Form):
 
 
 class ClientRegisterForm(forms.Form):
-    """реєстрація клієнта."""
+    """реєстрація клієнта.
+
+    проти спам-ботів використовую honeypot-поле: невидиме для людей
+    поле "website", боти автоматично заповнюють всі input, тому
+    непорожнє значення = бот. Honeypot ефективніше за CAPTCHA для
+    простих ботів і не псує UX живим користуцвачам.
+    """
     first_name = forms.CharField(label='Ім\'я', max_length=64)
     last_name = forms.CharField(label='Прізвище', max_length=64)
     email = forms.EmailField(label='Email')
@@ -74,6 +80,25 @@ class ClientRegisterForm(forms.Form):
         help_text='Мінімум 8 символів. Не можна використовувати лише цифри або поширені паролі.',
     )
     password2 = forms.CharField(label='Повторіть пароль', widget=forms.PasswordInput)
+    # honeypot: приховане поле з осмисленою назвою, ховаємо через CSS+autocomplete=off.
+    # боти не дивляться на CSS, заповнюють підряд - значить будь-яке значення тут = бот.
+    website = forms.CharField(
+        label='Website',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'tabindex': '-1',
+            'autocomplete': 'off',
+            'style': 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0;',
+            'aria-hidden': 'true',
+        }),
+    )
+
+    def clean_website(self):
+        # будь-яке значення у honeypot = бот. кидаю generic-помилку,
+        # не натякаю боту що його викрили.
+        if self.cleaned_data.get('website'):
+            raise forms.ValidationError('Помилка валідації форми.')
+        return ''
 
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()

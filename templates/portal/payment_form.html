@@ -151,17 +151,20 @@
                                 <label class="form-label small fw-bold">{{ T.pay_card_number }}</label>
                                 <input type="text" class="form-control form-control-lg" name="card_number"
                                        id="cardInput" inputmode="numeric" maxlength="23"
+                                       value="{{ card_form_data.card_number|default:'' }}"
                                        placeholder="1234 5678 9012 3456" required autocomplete="cc-number">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">{{ T.pay_card_holder }}</label>
                                 <input type="text" class="form-control" name="card_holder" id="holderInput"
+                                       value="{{ card_form_data.card_holder|default:'' }}"
                                        placeholder="IVAN PETRENKO" required autocomplete="cc-name">
                             </div>
                             <div class="row g-3 mb-3">
                                 <div class="col-7">
                                     <label class="form-label small fw-bold">{{ T.pay_card_expiry }}</label>
                                     <input type="text" class="form-control" name="card_expiry" id="expiryInput"
+                                           value="{{ card_form_data.card_expiry|default:'' }}"
                                            placeholder="MM/YY" maxlength="5" required autocomplete="cc-exp">
                                 </div>
                                 <div class="col-5">

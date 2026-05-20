@@ -33,3 +33,12 @@ colorama==0.4.6
 # production-веб-сервер
 gunicorn==23.0.0
 whitenoise==6.8.2
+
+# моніторинг помилок (Sentry). активується тільки якщо у env є SENTRY_DSN.
+sentry-sdk==2.20.0
+
+# rate-limiting для api (gps, notifications)
+django-ratelimit==4.1.0
+
+# Content Security Policy
+django-csp==3.8

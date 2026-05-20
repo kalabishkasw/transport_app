@@ -62,7 +62,7 @@ class Customer(models.Model):
     )
 
     notes = models.TextField(blank=True, verbose_name='Примітки')
-    is_active = models.BooleanField(default=True, verbose_name='Активний')
+    is_active = models.BooleanField(default=True, verbose_name='Активний', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 

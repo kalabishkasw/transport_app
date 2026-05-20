@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         #map { height: 360px; border-radius: 12px; }
-        /* Прибираємо стандартний білий квадрат навколо custom-маркерів */
+        /* прибираю стандартний білий квадрат навколо custom-маркерів */
         .leaflet-div-icon, .route-stop-marker {
             background: transparent !important;
             border: none !important;
@@ -210,7 +210,7 @@
                 <div class="card p-4 border-0 shadow-sm" style="position: sticky; top: 90px;">
                     <div class="text-muted small">{{ T.trip_price_per_ticket }}</div>
                     <div style="font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1;">
-                        {{ trip.base_price|price_local:LANG }}
+                        {{ display_price|price_local:LANG }}
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
@@ -261,7 +261,7 @@
             const diffEnd = Math.floor((arrival - now) / 1000);
 
             if (diffStart > 0) {
-                // Рейс ще не почався
+                // рейс ще не почався
                 let diff = diffStart;
                 const d = Math.floor(diff / 86400); diff -= d * 86400;
                 const h = Math.floor(diff / 3600); diff -= h * 3600;
@@ -272,19 +272,19 @@
                 el.textContent = parts.join(' ');
                 if (trackHint) trackHint.textContent = '{{ T.trip_gps_hint }}';
             } else if (diffEnd > 0) {
-                // У дорозі
+                // у дорозі
                 const elapsed = -diffStart;
                 const total = durationMin * 60;
                 const progress = total > 0 ? Math.min(100, Math.floor((elapsed / total) * 100)) : 0;
                 el.innerHTML = `🚌 {{ T.trip_countdown_inroute }} &nbsp; <span style="font-size:14px; opacity:0.85;">(${progress}%)</span>`;
-                // Підсвічуємо картку трекінгу
+                // підсвічую картку трекінгу
                 if (trackCard) {
                     trackCard.style.boxShadow = '0 8px 24px rgba(16,185,129,0.4)';
                     trackCard.style.transform = 'scale(1.02)';
                 }
                 if (trackHint) trackHint.innerHTML = '{{ T.trip_gps_hint_live }}';
             } else {
-                // Рейс завершено
+                // рейс завершено
                 el.textContent = '✓ {{ T.trip_countdown_done }}';
                 if (countdownCard) countdownCard.style.background = 'linear-gradient(135deg,#64748b,#475569)';
                 if (trackHint) trackHint.textContent = '{{ T.trip_gps_hint_past }}';
@@ -293,7 +293,7 @@
         tick(); setInterval(tick, 1000);
     })();
 
-    // Інтеграція погоди (Open-Meteo) для пункту призначення
+    // інтеграція погоди (Open-Meteo) для пункту призначення
     {% if stops_with_coords %}
     (function() {
         const stops = JSON.parse(document.getElementById('stops-data').textContent);
@@ -369,8 +369,8 @@
         const fallback = L.polyline(latlngs, {color: '#94a3b8', weight: 3, opacity: 0.5, dashArray: '8,6'}).addTo(map);
         map.fitBounds(fallback.getBounds(), {padding: [40, 40]});
 
-        // Геометрія реального маршруту (буде заповнено OSRM)
-        // Формат: масив [lat, lng]; cumulativeDist[i] = пройдена відстань до i-ої точки.
+        // геометрія реального маршруту (буде заповнено OSRM)
+        // формат: масив [lat, lng]; cumulativeDist[i] = пройдена відстань до i-ої точки.
         let routeCoords = null;
         let cumulativeDist = null;
         let totalDist = 0;
@@ -452,7 +452,7 @@
             return { latlng: [lat, lng], bearing };
         }
 
-        // Реальний маршрут по дорогах через OSRM
+        // реальний маршрут по дорогах через OSRM
         const coords = latlngs.map(p => p[1] + ',' + p[0]).join(';');
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
         const osrmPromise = fetch(osrmUrl)
@@ -502,7 +502,7 @@
         });
         let busMarker = null;
 
-        // Плавна анімація між позиціями
+        // плавна анімація між позиціями
         let animState = { from: null, to: null, startTime: 0, durationMs: 10000 };
         function easeInOutQuad(t) {
             return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -547,7 +547,7 @@
 
         function pollBusPosition() {
             const now = new Date();
-            // Показуємо автобус лише коли рейс реально у дорозі (між departure та arrival).
+            // показую автобус лише коли рейс реально у дорозі (між departure та arrival).
             // У майбутніх або вже завершених рейсах маркер прибираємо - інакше виглядає так,
             // ніби автобус їде хоча рейс ще навіть не почався.
             const inTransit = now >= tripDeparture && now <= tripArrival;
@@ -564,7 +564,7 @@
                 .then(data => {
                     if (data.lat == null || data.lng == null) return;
 
-                    // Точне snap-to-road: позиціонуємо саме між зазначеними зупинками.
+                    // точне snap-to-road: позиціонуємо саме між зазначеними зупинками.
                     let pos = [data.lat, data.lng];
                     if (routeCoords && data.nearest_stop_index != null && data.segment_t != null) {
                         const snapped = pointAlongSegment(data.nearest_stop_index, data.segment_t);
@@ -574,7 +574,7 @@
                         if (snapped) pos = snapped.latlng;
                     }
 
-                    // Плавно переміщуємо за 10 секунд (= інтервал опитування для live-рейсу)
+                    // плавно переміщую за 10 секунд (= інтервал опитуваня для live-рейсу)
                     moveBusTo(pos, 10000);
                     if (busMarker) {
                         busMarker.bindPopup(popupHtml(data));
@@ -583,8 +583,8 @@
                 .catch(e => console.warn('[GPS] Fetch error:', e));
         }
 
-        // Стартуємо опитування лише якщо рейс зараз у дорозі.
-        // У майбутні рейси (як і завершені) автобус не показуємо на цій сторінці -
+        // стартуємо опитування лише якщо рейс зараз у дорозі.
+        // у майбутні рейси (як і завершені) автобус не показуємо на цій сторінці -
         // користувач може перейти на /trip/<id>/track/ для demo-симуляції.
         const isLive = new Date() >= tripDeparture && new Date() <= tripArrival;
         if (isLive) {

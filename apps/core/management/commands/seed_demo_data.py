@@ -360,6 +360,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from django.conf import settings
+        from apps.core.signals import audit_disabled
+
+        with audit_disabled():
+            self._handle_inner(*args, **options)
+
+    def _handle_inner(self, *args, **options):
+        from django.conf import settings
 
         if options['reset']:
             # захист від випадкового запуску у production: --reset знесе усі дані.

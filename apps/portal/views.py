@@ -20,6 +20,17 @@ from apps.orders.models import Order, Ticket
 from apps.reviews.models import Review
 from apps.routes.models import Stop, Trip
 
+
+# rate-limit декоратор. якщо django-ratelimit не встановлено - no-op,
+# щоб локальна розробка/CI не падали при відсутності пакета.
+try:
+    from django_ratelimit.decorators import ratelimit
+except ImportError:
+    def ratelimit(*args, **kwargs):
+        def _wrap(view_func):
+            return view_func
+        return _wrap
+
 from .forms import (
     BookingContactForm,
     ClientRegisterForm,
@@ -134,12 +145,25 @@ def home(request):
 
     from apps.routes.models import Route
     from apps.customers.models import Customer
+    from django.conf import settings as django_settings
 
+    # маркетингові цифри для лендінгу. реальне значення * множник, але не нижче
+    # підлоги. множники і підлоги налаштовуються через env (див. settings).
+    real_passengers = Ticket.objects.filter(status__in=['paid', 'used', 'booked']).count()
     stats = {
-        'passengers_total': max(Ticket.objects.filter(status__in=['paid', 'used', 'booked']).count() * 17, 12500),
-        'trips_per_month': Trip.objects.filter(departure_at__gte=timezone.now() - timedelta(days=30)).count() or 120,
-        'routes_count': Route.objects.filter(is_active=True).count() or 25,
-        'cities_count': len(_all_cities()) or 40,
+        'passengers_total': max(
+            real_passengers * django_settings.LANDING_PASSENGER_MULTIPLIER,
+            django_settings.LANDING_PASSENGER_FLOOR,
+        ),
+        'trips_per_month': (
+            Trip.objects.filter(departure_at__gte=timezone.now() - timedelta(days=30)).count()
+            or django_settings.LANDING_TRIPS_PER_MONTH_FLOOR
+        ),
+        'routes_count': (
+            Route.objects.filter(is_active=True).count()
+            or django_settings.LANDING_ROUTES_FLOOR
+        ),
+        'cities_count': len(_all_cities()) or django_settings.LANDING_CITIES_FLOOR,
     }
 
     # FAQ за поточною мовою
@@ -341,6 +365,18 @@ def trip_detail(request, trip_id):
     ]
     stops_with_coords = [s for s in stops_data if s['lat'] is not None]
 
+    # рахую ціну за повний сегмент (від першої посадки до останньої висадки) -
+    # так само як показує форма бронювання за замовчуванням. без цього на
+    # сторінці деталей показувалось би trip.base_price, а у формі - segment_price,
+    # і вони могли б відрізнятись через округлення до 0.50 EUR.
+    from .booking_service import calculate_segment_price
+    boarding_default = next((s for s in stops if s.can_board), None)
+    alighting_default = next((s for s in reversed(stops) if s.can_alight), None)
+    if boarding_default and alighting_default and alighting_default.order > boarding_default.order:
+        display_price = calculate_segment_price(trip, boarding_default, alighting_default)
+    else:
+        display_price = trip.base_price
+
     return render(request, 'portal/trip_detail.html', {
         'trip': trip,
         'stops': stops,
@@ -349,6 +385,7 @@ def trip_detail(request, trip_id):
         'stops_with_coords': stops_with_coords,
         'reviews': reviews,
         'rating_stats': rating_stats,
+        'display_price': display_price,
     })
 
 
@@ -387,6 +424,55 @@ def trip_track(request, trip_id):
     })
 
 
+def segment_price_api(request, trip_id):
+    """
+    JSON API для JS-калькулятора форми бронювання.
+    повертає точну ціну сегмента з calculate_segment_price (та сама функція
+    що використовується при створенні замовлення), уже сконвертовану і
+    відформатовану через price_local. так JS не округлює сам і не виникає
+    розбіжностей між тим що показано на формі і тим що збережено у БД.
+
+    приймає параметр count (1..10) і повертає також formatted_total -
+    готовий рядок ціни за всі квитки, щоб JS не множив сам (на стороні JS
+    курс міг закешуватись у data-currency-rate і відрізнятись від поточного).
+    """
+    from .booking_service import calculate_segment_price
+    from .templatetags.i18n_extras import price_local
+    trip = get_object_or_404(
+        Trip.objects.select_related('route'),
+        pk=trip_id,
+    )
+    try:
+        b_id = int(request.GET.get('board', '0'))
+        a_id = int(request.GET.get('alight', '0'))
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'invalid stop ids'}, status=400)
+    try:
+        count = max(1, min(int(request.GET.get('count', '1')), 10))
+    except (TypeError, ValueError):
+        count = 1
+
+    try:
+        boarding = Stop.objects.get(pk=b_id, route=trip.route)
+        alighting = Stop.objects.get(pk=a_id, route=trip.route)
+    except Stop.DoesNotExist:
+        return JsonResponse({'error': 'stop not found'}, status=404)
+
+    if alighting.order <= boarding.order:
+        return JsonResponse({'error': 'bad segment order'}, status=400)
+
+    price_eur = calculate_segment_price(trip, boarding, alighting)
+    total_eur = price_eur * count
+    lang = request.session.get('portal_lang', 'uk')
+    return JsonResponse({
+        'price_eur': str(price_eur),
+        'formatted': price_local(price_eur, lang),
+        'total_eur': str(total_eur),
+        'formatted_total': price_local(total_eur, lang),
+    })
+
+
+@ratelimit(key='ip', rate='60/m', block=True)
 def trip_position_api(request, trip_id):
     """
     JSON API: повертає поточну псевдо-GPS позицію автобуса.
@@ -394,6 +480,9 @@ def trip_position_api(request, trip_id):
 
     параметр ?demo=1 запускає прискорену симуляцію (для демо рейсів,
     які заплановано на майбутнє).
+
+    rate-limit: 60 запитів за хвилину з одного IP. реальний клієнт
+    робить ~6-12 запитів/хв, 60 з запасом. при перевищенні - 429.
     """
     from .gps_simulator import simulate_position
 
@@ -503,12 +592,30 @@ def booking_form(request, trip_id):
     stops = list(trip.route.stops.all().order_by('order'))
     boarding_options = [s for s in stops if s.can_board]
     alighting_options = [s for s in stops if s.can_alight]
+    # назви міст першої посадки і останньої висадки - JS-калькулятор використовує
+    # їх щоб визначити "повний сегмент" (бо у місті може бути кілька автовокзалів).
+    # синхронізовано з calculate_segment_price на сервері, який теж порівнює city.
+    first_boarding_city = boarding_options[0].city if boarding_options else ''
+    last_alighting_city = alighting_options[-1].city if alighting_options else ''
+    # початкова ціна для відображення - така ж як на trip_detail
+    # (для повного маршруту = base_price). JS перерахує її лише коли
+    # користувач сам обере інші зупинки.
+    from .booking_service import calculate_segment_price
+    if boarding_options and alighting_options:
+        initial_price = calculate_segment_price(
+            trip, boarding_options[0], alighting_options[-1]
+        )
+    else:
+        initial_price = trip.base_price
 
-    # дані зупинок для JS-калькулятора ціни сегмента (id + offsets)
+    # дані зупинок для JS-калькулятора ціни сегмента (id + offsets + city)
+    # city потрібне щоб JS міг застосувати правило "повний сегмент за містом"
+    # (Львів-Підзамче + Львів-Головний = одне місто з точки зору тарифу).
     import json as _json
     stops_for_price = _json.dumps([
         {
             'id': s.id,
+            'city': s.city,
             'departure_offset': s.departure_offset_minutes,
             'arrival_offset': s.arrival_offset_minutes,
             'order': s.order,
@@ -554,13 +661,16 @@ def booking_form(request, trip_id):
                 'passenger_forms': passenger_forms,
                 'boarding_options': boarding_options,
                 'alighting_options': alighting_options,
-                'total_price': trip.base_price * count,
+                'total_price': initial_price * count,
                 'occupied_seats': occupied_seats,
                 'total_seats': trip.vehicle.seats_total or 0,
                 'stops_for_price': stops_for_price,
                 'route_duration_minutes': trip.route.duration_minutes,
                 'currency_rate': currency_rate,
                 'currency_symbol': currency_symbol,
+                'first_boarding_city': first_boarding_city,
+                'last_alighting_city': last_alighting_city,
+                'initial_price': initial_price,
             })
 
         if all_valid:
@@ -640,13 +750,16 @@ def booking_form(request, trip_id):
         'passenger_forms': passenger_forms,
         'boarding_options': boarding_options,
         'alighting_options': alighting_options,
-        'total_price': trip.base_price * count,
+        'total_price': initial_price * count,
         'occupied_seats': occupied_seats,
         'total_seats': trip.vehicle.seats_total or 0,
         'stops_for_price': stops_for_price,
         'route_duration_minutes': trip.route.duration_minutes,
         'currency_rate': currency_rate,
         'currency_symbol': currency_symbol,
+        'first_boarding_city': first_boarding_city,
+        'last_alighting_city': last_alighting_city,
+        'initial_price': initial_price,
     })
 
 
@@ -702,6 +815,7 @@ def payment_form(request, order_id):
     })
 
 
+@require_POST
 @login_required(login_url='/login/')
 def payment_process(request, order_id):
     """
@@ -710,10 +824,10 @@ def payment_process(request, order_id):
 
     Це mock! Реальна інтеграція з LiqPay/Stripe потребує API-ключів, callback-URL,
     верифікації підпису, обробки webhook про результат платежу.
-    """
-    if request.method != 'POST':
-        return redirect('portal:payment_form', order_id=order_id)
 
+    при помилці валідації не редиректжу, а рендерю payment_form.html з помилками
+    і збереженими полями (крім CVV, його з міркувань безпеки не повертаю).
+    """
     order = get_object_or_404(
         Order.objects.select_related('trip__route'),
         pk=order_id,
@@ -748,7 +862,17 @@ def payment_process(request, order_id):
     if errors:
         for e in errors:
             messages.error(request, e)
-        return redirect('portal:payment_form', order_id=order.id)
+        # рендеж форми зі збереженими полями, щоб не вводити все наново.
+        # CVV не повертаю - не зберігаємо у render для безпеки (PCI-style).
+        return render(request, 'portal/payment_form.html', {
+            'order': order,
+            'card_form_data': {
+                'card_number': card_number,
+                'card_holder': card_holder,
+                'card_expiry': card_expiry,
+                # CVV навмисно не передаю
+            },
+        })
 
     # успішна "оплата".
     with transaction.atomic():
@@ -838,26 +962,35 @@ def set_language(request, lang_code):
 
 @login_required(login_url='/login/')
 def account(request):
-    """Кабінет: майбутні та минулі бронювання."""
+    """кабінет: майбутні та минулі бронювання.
+    фільтрую upcoming/past у БД (не у Python), щоб не тягнути все підряд
+    при великій кількості замовлень. минулі бронювання пагінуються."""
+    from django.core.paginator import Paginator
     now = timezone.now()
     user_filter = Q(created_by=request.user)
     if request.user.email:
         user_filter |= Q(contact_email__iexact=request.user.email)
-    orders = (
+
+    base = (
         Order.objects
         .filter(user_filter)
         .select_related('trip__route', 'trip__vehicle')
         .annotate(tickets_total=Count('tickets'))
-        .order_by('-trip__departure_at')
         .distinct()
     )
 
-    upcoming = [o for o in orders if o.trip.departure_at >= now]
-    past = [o for o in orders if o.trip.departure_at < now]
+    upcoming = list(
+        base.filter(trip__departure_at__gte=now).order_by('trip__departure_at')
+    )
+
+    past_qs = base.filter(trip__departure_at__lt=now).order_by('-trip__departure_at')
+    paginator = Paginator(past_qs, 20)
+    past_page = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'portal/account.html', {
         'upcoming': upcoming,
-        'past': past,
+        'past': past_page.object_list,
+        'past_page': past_page,
     })
 
 
@@ -908,15 +1041,16 @@ def _user_orders_filter(user):
 
 
 def _can_cancel_order(order):
-    """скасування дозволено не пізніше ніж за 24 години до рейсу
-    і лише для активних статусів."""
+    """скасування дозволено не пізніше ніж за settings.BOOKING_CANCEL_HOURS_BEFORE_TRIP
+    годин до рейсу і лише для активних статусів."""
+    from django.conf import settings as django_settings
     if order.status in (
         Order.Status.CANCELLED, Order.Status.REFUNDED,
         Order.Status.COMPLETED, Order.Status.IN_PROGRESS,
     ):
         return False
     hours_until = (order.trip.departure_at - timezone.now()).total_seconds() / 3600
-    return hours_until >= 24
+    return hours_until >= django_settings.BOOKING_CANCEL_HOURS_BEFORE_TRIP
 
 
 @login_required(login_url='/login/')
@@ -971,7 +1105,7 @@ def cancel_booking(request, order_id):
 
 @login_required(login_url='/login/')
 def leave_review(request, order_id):
-    """Залишити відгук про поїздку."""
+    """залишити відгук про поїздку."""
     owner_filter = Q(created_by=request.user)
     if request.user.email:
         owner_filter |= Q(contact_email__iexact=request.user.email)

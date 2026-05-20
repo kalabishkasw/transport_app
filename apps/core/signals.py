@@ -3,6 +3,7 @@
 """
 
 import threading
+from contextlib import contextmanager
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
@@ -28,6 +29,31 @@ def get_current_user():
     return getattr(_thread_locals, 'user', None)
 
 
+def _is_audit_disabled():
+    """перевіряю чи відключено аудит у поточному потоці.
+    seed-команди вмикають це через контекст-менеджер audit_disabled(),
+    щоб не створювати тисячі AuditLog-рядків при наповненні демо-даних."""
+    return getattr(_thread_locals, 'audit_disabled', False)
+
+
+@contextmanager
+def audit_disabled():
+    """контекст-менеджер: відключити запис у AuditLog для поточного потоку.
+
+    приклад:
+        from apps.core.signals import audit_disabled
+        with audit_disabled():
+            # масово створюю об'єкти, AuditLog не пишеться
+            Trip.objects.bulk_create(trips)
+    """
+    prev = getattr(_thread_locals, 'audit_disabled', False)
+    _thread_locals.audit_disabled = True
+    try:
+        yield
+    finally:
+        _thread_locals.audit_disabled = prev
+
+
 TRACKED_MODELS = [Customer, Vehicle, Driver, Route, Stop, Trip, Order, Ticket, PromoCode]
 
 
@@ -50,6 +76,8 @@ def store_old_state(sender, instance, **kwargs):
     """запам'ятати старий стан перед збереженням, щоб порахувати diff."""
     if sender not in TRACKED_MODELS:
         return
+    if _is_audit_disabled():
+        return
     if not instance.pk:
         instance._audit_old = None
         return
@@ -63,6 +91,8 @@ def store_old_state(sender, instance, **kwargs):
 @receiver(post_save)
 def log_save(sender, instance, created, **kwargs):
     if sender not in TRACKED_MODELS:
+        return
+    if _is_audit_disabled():
         return
     new_data = _model_dict(instance)
     changes = {}
@@ -91,6 +121,8 @@ def log_save(sender, instance, created, **kwargs):
 @receiver(post_delete)
 def log_delete(sender, instance, **kwargs):
     if sender not in TRACKED_MODELS:
+        return
+    if _is_audit_disabled():
         return
     AuditLog.objects.create(
         user=get_current_user(),

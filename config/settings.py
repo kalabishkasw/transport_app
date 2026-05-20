@@ -110,6 +110,15 @@ MIDDLEWARE = [
     'apps.core.middleware.AutoUpdateTripStatusMiddleware',
 ]
 
+# CSP middleware додаємо тільки якщо пакет встановлено і не у DEBUG.
+# у DEBUG CSP заважає django-debug-toolbar та live-reload скриптам.
+try:
+    import csp  # noqa: F401
+    if not DEBUG:
+        MIDDLEWARE.append('csp.middleware.CSPMiddleware')
+except ImportError:
+    pass
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -131,7 +140,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-#  База даних
+#  база даних
 # у production Render передає DATABASE_URL з підключеної postgres-бази.
 # локально читаємо окремі параметри з .env (DATABASE_NAME, _USER тощо).
 
@@ -169,7 +178,7 @@ CACHES = {
 }
 
 
-# Валідація паролів
+# валідація паролів
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -215,9 +224,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/admin/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/admin/login/'
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/account/'
+LOGOUT_REDIRECT_URL = '/'
 
 
 #  Email
@@ -240,7 +249,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@transauto.travel')
 
 
-#  Бізнес-константи: бонусна програма
+#  бізнес-константи: бонусна програма
 # 1 EUR суми завершеного замовлення = 1 бал лояльності.
 # Бали можна списати при оплаті, але не більше LOYALTY_MAX_REDEEM_RATIO * total_price.
 
@@ -255,6 +264,100 @@ LOYALTY_LEVELS = [
     ('Золотий',     250, '#f59e0b'),
     ('Платиновий',  500, '#0ea5e9'),
 ]
+
+
+# бізнес-константи: бронювання
+# за скільки годин до рейсу клієнт ще може скасувати замовлення
+BOOKING_CANCEL_HOURS_BEFORE_TRIP = int(os.getenv('BOOKING_CANCEL_HOURS_BEFORE_TRIP', '24'))
+
+# фіксований курс EUR -> UAH. якщо задано не порожній - використовується замість
+# курсу НБУ. для дипломної демонстрації гарантує що ціна не змінюється між
+# рестартами runserver і між різними сторінками. рекомендую '51.5' як середнє.
+EUR_TO_UAH_FIXED = os.getenv('EUR_TO_UAH_FIXED', '51.5')
+
+
+# маркетингові статистики на лендінгу.
+# реальна кількість квитків у базі множиться на ці значення,
+# щоб не показувати голу цифру для свіжо-заповненої демо-БД.
+# для production бажано виставити LANDING_PASSENGER_MULTIPLIER=1.
+LANDING_PASSENGER_MULTIPLIER = int(os.getenv('LANDING_PASSENGER_MULTIPLIER', '17'))
+LANDING_PASSENGER_FLOOR = int(os.getenv('LANDING_PASSENGER_FLOOR', '12500'))
+LANDING_TRIPS_PER_MONTH_FLOOR = int(os.getenv('LANDING_TRIPS_PER_MONTH_FLOOR', '120'))
+LANDING_ROUTES_FLOOR = int(os.getenv('LANDING_ROUTES_FLOOR', '25'))
+LANDING_CITIES_FLOOR = int(os.getenv('LANDING_CITIES_FLOOR', '40'))
+
+
+# Sentry: моніторинг помилок у production.
+# ініціалізую тільки якщо у env є SENTRY_DSN (інакше працює без моніторингу).
+# у DEBUG не активую, щоб локальні помилки не летіли у трекер.
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN and not DEBUG:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration()],
+            # відсоток запитів які трасуються (performance monitoring).
+            # 0 = тільки помилки, без перформанс-трейсів.
+            traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0')),
+            # надсилати PII (IP, headers) у Sentry. за замовчуванням ні.
+            send_default_pii=env_bool('SENTRY_SEND_PII', False),
+            environment=os.getenv('SENTRY_ENVIRONMENT', 'production'),
+        )
+    except ImportError:
+        # sentry-sdk не встановлено - тихо ігнорую (для випадків коли
+        # SENTRY_DSN випадково попав у .env при відсутності пакета).
+        pass
+
+
+# Content Security Policy.
+# дозволяю CDN-домени які реально використовуються у шаблонах:
+# - cdn.jsdelivr.net: bootstrap, chart.js, fullcalendar, flatpickr, bootstrap-icons
+# - unpkg.com: leaflet
+# - fonts.googleapis.com, fonts.gstatic.com: Inter font
+# - flagcdn.com: прапори у мова-перемикачі
+# - basemaps.cartocdn.com: tiles карти
+# - router.project-osrm.org: OSRM API для маршрутизації
+# - images.unsplash.com: hero-картинки на лендінгу
+# - bank.gov.ua: курс НБУ (з боку клієнта не використовується, але про всяк)
+# - api.open-meteo.com: погода
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # inline-скрипти у шаблонах. в ідеалі винести у .js файли.
+    'https://cdn.jsdelivr.net',
+    'https://unpkg.com',
+)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # inline-стилі у багатьох шаблонах
+    'https://cdn.jsdelivr.net',
+    'https://unpkg.com',
+    'https://fonts.googleapis.com',
+)
+CSP_FONT_SRC = (
+    "'self'",
+    'https://fonts.gstatic.com',
+    'https://cdn.jsdelivr.net',
+    'data:',
+)
+CSP_IMG_SRC = (
+    "'self'",
+    'data:',
+    'https://cdn.jsdelivr.net',
+    'https://flagcdn.com',
+    'https://basemaps.cartocdn.com',
+    'https://*.tile.openstreetmap.org',
+    'https://images.unsplash.com',
+    'https://unpkg.com',
+)
+CSP_CONNECT_SRC = (
+    "'self'",
+    'https://router.project-osrm.org',
+    'https://api.open-meteo.com',
+)
+CSP_FRAME_ANCESTORS = ("'none'",)
 
 
 #  Logging

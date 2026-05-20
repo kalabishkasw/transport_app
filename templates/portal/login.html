@@ -32,6 +32,12 @@
             </button>
         </form>
 
+        <div class="text-center mt-3 small">
+            <a href="{% url 'portal:password_reset' %}" class="text-muted">
+                {% if LANG == 'en' %}Forgot password?{% else %}Забули пароль?{% endif %}
+            </a>
+        </div>
+
         <div class="text-center mt-4 small text-muted">
             {{ T.login_no_account }}
             <a href="{% url 'portal:register' %}" class="fw-semibold">{{ T.login_register_link }}</a>

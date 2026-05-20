@@ -114,6 +114,13 @@ class Command(BaseCommand):
         post_delete.disconnect(recalc_order_total_on_delete, sender=Ticket)
         post_save.disconnect(send_order_confirmation_email, sender=Order)
 
+        # додатково вимикаю запис у AuditLog для всього процесу.
+        # без цього 23k замовлень + квитки створили б ~50k+ AuditLog-рядків.
+        from apps.core.signals import audit_disabled
+        with audit_disabled():
+            self._handle_inner(*args, **options)
+
+    def _handle_inner(self, *args, **options):
         try:
             if options['reset']:
                 self.stdout.write('Видалення існуючих замовлень...')

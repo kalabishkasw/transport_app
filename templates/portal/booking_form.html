@@ -99,7 +99,10 @@
       data-total-duration="{{ route_duration_minutes }}"
       data-min-price="5"
       data-currency-rate="{{ currency_rate }}"
-      data-currency-symbol="{{ currency_symbol }}">
+      data-currency-symbol="{{ currency_symbol }}"
+      data-first-boarding-city="{{ first_boarding_city|default:'' }}"
+      data-last-alighting-city="{{ last_alighting_city|default:'' }}"
+      data-segment-price-url="{% url 'portal:segment_price_api' trip.id %}">
     {% csrf_token %}
     <input type="hidden" name="count" id="count-input" value="{{ count }}">
     <script id="stops-price-data" type="application/json">{{ stops_for_price|safe }}</script>
@@ -264,7 +267,7 @@
                 </div>
                 <div class="d-flex justify-content-between small mb-2" id="summary-price-per-row">
                     <span class="text-muted">{{ T.bf_summary_price_per }}</span>
-                    <span id="summary-price-per">{{ trip.base_price|price_local:LANG }}</span>
+                    <span id="summary-price-per" data-initial="1">{{ initial_price|price_local:LANG }}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
                     <span class="text-muted">{{ T.bf_summary_count }}</span>
@@ -327,7 +330,7 @@
         }
     });
 
-    // Клієнт-сайд валідація: попереджаємо до сабміту
+    // клієнт-сайд валідація: попереджаємо до сабміту
     document.getElementById('booking-form').addEventListener('submit', function(e) {
         const required = [
             { sel: 'select[name="boarding_stop"]', label: 'Місце посадки' },
@@ -336,7 +339,7 @@
             { sel: 'input[name="first_name"]', label: 'Ім\'я контакту' },
             { sel: 'input[name="phone"]', label: 'Телефон контакту' },
         ];
-        // Поля пасажирів
+        // поля пасажирів
         document.querySelectorAll('[id^="id_p"][id$="-last_name"]').forEach((inp, i) => {
             required.push({ sel: '#' + inp.id, label: 'Прізвище пасажира #' + (i + 1) });
         });
@@ -360,7 +363,7 @@
             }
         });
 
-        // Перевірка посадки/висадки: висадка має бути не такою самою і не раніше посадки
+        // перевірка посадки/висадки: висадка має бути не такою самою і не раніше посадки
         const boardSel = document.querySelector('select[name="boarding_stop"]');
         const alightSel = document.querySelector('select[name="alighting_stop"]');
         if (boardSel && alightSel && boardSel.value && alightSel.value && boardSel.value === alightSel.value) {
@@ -390,9 +393,9 @@
         window.location.href = url.toString();
     }
 
-    // ----- Динамічний перерахунок ціни залежно від обраних посадки/висадки -----
-    // Так само як на серверній стороні: price = base * (alighting.arrival - boarding.departure) / total_duration
-    // округлюємо до 0.50 і ставимо мінімум 5.
+    // динамічний перерахунок ціни залежно від обраних посадки/висадки
+    // так само як на серверній стороні: price = base * (alighting.arrival - boarding.departure) / total_duration
+    // округлив до 0.50 і ставимо мінімум 5.
     (function() {
         const form = document.getElementById('booking-form');
         const dataEl = document.getElementById('stops-price-data');
@@ -412,7 +415,7 @@
         function fmtPrice(eurAmount) {
             // конвертує EUR-amount у локальну валюту і форматує
             const local = eurAmount * currencyRate;
-            // якщо UAH (rate > 5), показуємо без копійок; для EUR з 2 знаками
+            // якщо UAH (rate > 5), показує без копійок; для EUR з 2 знаками
             const decimals = currencyRate > 5 ? 0 : 2;
             return `${local.toFixed(decimals)} ${currencySymbol}`;
         }
@@ -420,47 +423,109 @@
         const boardSel = form.querySelector('select[name="boarding_stop"]');
         const alightSel = form.querySelector('select[name="alighting_stop"]');
         const countInput = document.getElementById('count-input');
-        const pricePerEl = document.querySelector('.col-lg-4 .small.mb-2 + .mt-3') ? null : null;
 
         // елементи у sidebar з ціною
         const pricePerEl = document.getElementById('summary-price-per');
         const totalEl = document.getElementById('summary-total');
 
-        function calcSegmentPrice(boardingId, alightingId) {
+        // запам'ятовую оригінальні серверні рядки ціни (для повного маршуту).
+        // вони відрендерені через price_local з актуальним курсом - якщо JS-формула
+        // fmtPrice використає застарілий data-currency-rate, числа розійдуться.
+        // тому повертаю саме ці рядки коли селекти невалідні.
+        const initialPricePerText = pricePerEl ? pricePerEl.textContent : '';
+        const initialTotalText = totalEl ? totalEl.textContent : '';
+
+        const segmentPriceUrl = form.dataset.segmentPriceUrl;
+        let lastPricePerTicketEur = basePrice;  // кешую останню отриману ціну EUR
+
+        // не рахую ціну у JS - роблю AJAX-запит на сервер, де calculate_segment_price
+        // та сама функція що використовується при створенні замовлення. так гарантую
+        // що ціна на формі = ціна у БД = ціна на сторінці оплати = ціна у PDF.
+        // це усуває розходження через різне округлення у Python vs JS.
+        async function fetchSegmentPrice(boardingId, alightingId, count) {
+            if (!segmentPriceUrl || !boardingId || !alightingId) return null;
+            try {
+                const url = `${segmentPriceUrl}?board=${encodeURIComponent(boardingId)}` +
+                            `&alight=${encodeURIComponent(alightingId)}` +
+                            `&count=${encodeURIComponent(count || 1)}`;
+                const resp = await fetch(url, {credentials: 'same-origin'});
+                if (!resp.ok) return null;
+                const data = await resp.json();
+                if (data && data.price_eur) {
+                    return {
+                        eur: parseFloat(data.price_eur),
+                        formatted: data.formatted,
+                        formatted_total: data.formatted_total,
+                    };
+                }
+            } catch (e) {
+                // мережа недоступна - ціна не міняється
+            }
+            return null;
+        }
+
+        function calcSegmentPriceLocal(boardingId, alightingId) {
+            // локальний fallback на випадок коли AJAX недоступний
             const board = stopsData.find(s => String(s.id) === String(boardingId));
             const alight = stopsData.find(s => String(s.id) === String(alightingId));
             if (!board || !alight || !totalDuration) return basePrice;
             const segMin = alight.arrival_offset - board.departure_offset;
             if (segMin <= 0) return basePrice;
             let p = basePrice * (segMin / totalDuration);
-            // округлення до кратного 0.50
             p = Math.round(p * 2) / 2;
             p = Math.max(p, minPrice);
             p = Math.min(p, basePrice);
             return p;
         }
 
-        function refreshPrice() {
+        async function refreshPrice() {
             const bId = boardSel ? boardSel.value : '';
             const aId = alightSel ? alightSel.value : '';
             const count = parseInt(countInput.value || '1', 10);
             if (!bId || !aId) {
-                // без вибору показуємо базову ціну за повний маршрут
-                if (pricePerEl) pricePerEl.textContent = fmtPrice(basePrice);
-                if (totalEl) totalEl.textContent = fmtPrice(basePrice * count);
+                // без вибору відновлюю серверні рядки (initial_price | price_local).
+                // не використовую fmtPrice - він множив би через застарілий currencyRate.
+                if (pricePerEl) pricePerEl.textContent = initialPricePerText;
+                if (totalEl) totalEl.textContent = initialTotalText;
                 return;
             }
-            const perTicket = calcSegmentPrice(bId, aId);
-            if (pricePerEl) pricePerEl.textContent = fmtPrice(perTicket);
-            if (totalEl) totalEl.textContent = fmtPrice(perTicket * count);
+            // тільки через сервер - інакше можуть бути розбіжності з calculate_segment_price.
+            // якщо AJAX недоступний або сегмент невалідний (Львів-Львів, alight<=board) -
+            // ціну не міняю, лишаю серверне початкове значення.
+            // за квиток і total беру готові рядки з сервера, JS не множить сам
+            // (data-currency-rate міг застаріти, тоді 37*51=1887 замість 37*51.5=1906).
+            const fromServer = await fetchSegmentPrice(bId, aId, count);
+            if (fromServer) {
+                lastPricePerTicketEur = fromServer.eur;
+                if (pricePerEl) pricePerEl.textContent = fromServer.formatted;
+                if (totalEl) totalEl.textContent = fromServer.formatted_total;
+            } else {
+                // AJAX повернув null (наприклад alight <= board, як Львів-Львів).
+                // відновлюю серверне значення - воно гарантовано для повного маршруту.
+                if (pricePerEl) pricePerEl.textContent = initialPricePerText;
+                if (totalEl) totalEl.textContent = initialTotalText;
+            }
         }
 
         if (boardSel) boardSel.addEventListener('change', refreshPrice);
         if (alightSel) alightSel.addEventListener('change', refreshPrice);
-        refreshPrice();
+        // не викликаю refreshPrice() на старті - початкову ціну вже виставив сервер
+        // через initial_price + фільтр price_local (з тим самим курсом що на trip_detail).
+        // якщо викликати JS-перерахунок, він округлить через Math.round до 0.50 EUR
+        // і дасть інше число (наприклад при дробовому базовому 45.25 EUR).
+        // оновлюю total коли користувач змінює count, без перерахунку ціни за квиток.
+        if (countInput) {
+            countInput.addEventListener('change', function() {
+                const bId = boardSel ? boardSel.value : '';
+                const aId = alightSel ? alightSel.value : '';
+                if (bId && aId) {
+                    refreshPrice();
+                }
+            });
+        }
     })();
 
-    // ----- Інтерактивна схема місць -----
+    //  інтерактивна схема місць
     (function() {
         const grid = document.getElementById('seatmap-grid');
         if (!grid) return;
@@ -472,7 +537,7 @@
             if (occEl) occupied = JSON.parse(occEl.textContent || '[]');
         } catch (e) {}
 
-        // Розкладка: 4 крісла в ряд (2 + прохід + 2). Останній ряд може мати 5.
+        // розкладка: 4 крісла в ряд (2 + прохід + 2). останній ряд може мати 5.
         const cols = 5; // 2 ліворуч, прохід, 2 праворуч (5 колонок з прохідом)
         const seatsPerRow = 4;
         const rows = Math.ceil(total / seatsPerRow);
@@ -512,7 +577,7 @@
             seatInputs.forEach((inp, i) => {
                 inp.value = selected[i] || '';
             });
-            // Бейджі у картках пасажирів
+            // бейджі у картках пасажирів
             document.querySelectorAll('.seat-badge').forEach((badge, i) => {
                 const valEl = badge.querySelector('.seat-value');
                 if (selected[i]) {

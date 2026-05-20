@@ -24,6 +24,16 @@ from .decorators import staff_required
 from .models import AuditLog
 
 
+# rate-limit декоратор. no-op якщо django-ratelimit не встановлено.
+try:
+    from django_ratelimit.decorators import ratelimit
+except ImportError:
+    def ratelimit(*args, **kwargs):
+        def _wrap(view_func):
+            return view_func
+        return _wrap
+
+
 PAGE_SIZE = 20
 
 
@@ -605,7 +615,10 @@ def orders_export(request):
         .annotate(tickets_total=Count('tickets'))
         .order_by('-created_at')
     )
-    for o in qs:
+    # iterator(chunk_size=1000) тримає у пам'яті лише 1000 об'єктів за раз
+    # замість всіх 23k+ замовлень. Без цього експорт на великих обсягах
+    # роздуває пам'ять воркера до 500+ МБ.
+    for o in qs.iterator(chunk_size=1000):
         ws.append([
             _safe(o.order_number),
             o.created_at.replace(tzinfo=None),
@@ -661,7 +674,9 @@ def trips_export(request):
         ))
         .order_by('-departure_at')
     )
-    for t in qs:
+    # iterator(chunk_size=500) для економії пам'яті. рейсів ~1500, але
+    # запас на майбутнє коли база виросте.
+    for t in qs.iterator(chunk_size=500):
         driver_name = ''
         if t.main_driver_id:
             driver_name = f'{t.main_driver.user.last_name} {t.main_driver.user.first_name}'
@@ -721,10 +736,14 @@ def audit_log(request):
 
 
 @staff_required
+@ratelimit(key='user', rate='120/m', block=True)
 def notifications_data(request):
     """JSON з лічильником і списком останніх сповіщень для топбара.
     Показуємо тільки нові замовлення за останні 24 години (інакше лічильник
-    накопичує тисячі історичних pending-замовлень)."""
+    накопичує тисячі історичних pending-замовлень).
+
+    rate-limit: 120 запитів/хв на користувача (топбар поллит раз на 30 сек,
+    тобто реально 2/хв - 120 з запасом)."""
     since = timezone.now() - timedelta(hours=24)
     recent_pending = Order.objects.filter(
         status=Order.Status.PENDING,

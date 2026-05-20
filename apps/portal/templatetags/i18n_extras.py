@@ -11,8 +11,10 @@
 """
 import json
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from urllib.error import URLError
 from urllib.request import urlopen
+from socket import timeout as SocketTimeout
 
 from django import template
 from django.core.cache import cache
@@ -32,17 +34,40 @@ RATE_CACHE_TTL = 60 * 60 * 24  # 24 години
 
 def get_eur_to_uah():
     """
-    повертає актуальний курс EUR -> UAH від НБУ. Кешує на 24 години.
+    повертає актуальний курс EUR -> UAH.
+
+    логіка:
+    1. якщо у settings/env задано EUR_TO_UAH_FIXED - використовую його
+       (для дипломної демонстрації стабільності цін незалежно від рестартів).
+    2. інакше - беру з кешу.
+    3. інакше - тягну з НБУ.
+    4. fallback - EUR_TO_UAH_FALLBACK.
+
     при будь-якій помилці (нема інтернету, NBU не відповідає, формат не той)
     повертає fallback значення.
     """
+    # фіксований курс з settings/env має пріоритет. так гарантую що для одного
+    # рейсу ціна показується однаково на сторінці деталей і у формі бронювання,
+    # навіть якщо між запитами кеш очистився чи runserver перезавантажився.
+    from django.conf import settings as django_settings
+    fixed = getattr(django_settings, 'EUR_TO_UAH_FIXED', '') or ''
+    if fixed:
+        try:
+            return Decimal(str(fixed))
+        except (InvalidOperation, ValueError, TypeError):
+            pass
+
     cached = cache.get(RATE_CACHE_KEY)
     if cached is not None:
         try:
             return Decimal(str(cached))
-        except Exception:
+        except (InvalidOperation, ValueError, TypeError):
             pass
 
+    # перелічую конкретні очікувані помилки замість сирого Exception:
+    # URLError - мережеві проблеми, SocketTimeout - таймаут,
+    # JSONDecodeError - НБУ повернув не JSON, InvalidOperation/KeyError -
+    # формат відповіді змінився.
     try:
         with urlopen(NBU_EUR_URL, timeout=3) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -50,8 +75,12 @@ def get_eur_to_uah():
             rate = Decimal(str(data[0]['rate']))
             cache.set(RATE_CACHE_KEY, str(rate), RATE_CACHE_TTL)
             return rate
-    except Exception:
-        logger.warning('Не вдалося отримати курс НБУ, використовую fallback %s', EUR_TO_UAH_FALLBACK)
+    except (URLError, SocketTimeout, json.JSONDecodeError,
+            InvalidOperation, KeyError, IndexError, ValueError) as exc:
+        logger.warning(
+            'Не вдалося отримати курс НБУ (%s), використовую fallback %s',
+            exc.__class__.__name__, EUR_TO_UAH_FALLBACK,
+        )
 
     # кешую fallback на 1 годину щоб у разі довгих проблем з NBU
     # не довбати їх на кожен запит

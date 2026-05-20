@@ -5,6 +5,7 @@ Ticket - окремий квиток на одного пасажира зі с�
 PromoCode - знижка у відсотках з обмеженням за кількістю використань і датами.
 """
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -16,7 +17,8 @@ class PromoCode(models.Model):
     description = models.CharField(max_length=200, blank=True, verbose_name='Опис')
     discount_percent = models.PositiveSmallIntegerField(
         verbose_name='Знижка, %',
-        help_text='Відсоток знижки від суми замовлення',
+        help_text='Відсоток знижки від суми замовлення (1-100)',
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
     )
     valid_from = models.DateField(default=timezone.now, verbose_name='Діє з')
     valid_until = models.DateField(verbose_name='Діє до')
@@ -106,7 +108,9 @@ class Order(models.Model):
     contact_first_name = models.CharField(max_length=64, verbose_name='Ім\'я контакту')
     contact_last_name = models.CharField(max_length=64, verbose_name='Прізвище контакту')
     contact_phone = models.CharField(max_length=30, verbose_name='Телефон')
-    contact_email = models.EmailField(blank=True, verbose_name='Email')
+    # індекс на email бо account/booking_detail/cancel роблять filter(contact_email__iexact=...).
+    # без індексу seq scan по 23k+ замовлень.
+    contact_email = models.EmailField(blank=True, verbose_name='Email', db_index=True)
 
     status = models.CharField(
         max_length=15,
@@ -145,6 +149,18 @@ class Order(models.Model):
         decimal_places=2,
         default=0,
         verbose_name='Сума знижки',
+        help_text='Сума знижки від промокоду у валюті замовлення.',
+    )
+    # окреме поле щоб бали не плуталися зі знижкою від промокоду.
+    # без цього розділення повторний recalculate_total() (наприклад при
+    # адмін-редагуванні квитка) стер би бали - вони лишилися б лише
+    # у total_price, але discount_amount би перерахувався тільки за промокодом.
+    loyalty_redeemed_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Використано балами',
+        help_text='Сума, оплачена бонусними балами (1 бал = 1 EUR).',
     )
 
     notes = models.TextField(blank=True, verbose_name='Примітки')
@@ -181,14 +197,21 @@ class Order(models.Model):
             super().save(update_fields=['order_number'])
 
     def recalculate_total(self):
-        """перерахувати загальну суму як сума цін усіх квитків мінус знижка."""
+        """перерахувати загальну суму як сума цін усіх квитків мінус знижка промокоду
+        мінус використані бали. використані бали (loyalty_redeemed_amount) збережено
+        у БД і додається до підсумку, щоб повторний перерахунок не стер балів."""
         from decimal import Decimal
         subtotal = sum((t.price for t in self.tickets.all()), start=Decimal('0'))
         discount = Decimal('0')
         if self.promo_code and self.promo_code.is_valid_now:
             discount = (subtotal * Decimal(self.promo_code.discount_percent) / Decimal(100)).quantize(Decimal('0.01'))
         self.discount_amount = discount
-        self.total_price = subtotal - discount
+        loyalty = self.loyalty_redeemed_amount or Decimal('0')
+        # не даємо total_price стати від'ємним якщо чомусь бали > (subtotal - discount)
+        total = subtotal - discount - loyalty
+        if total < 0:
+            total = Decimal('0')
+        self.total_price = total
         self.save(update_fields=['total_price', 'discount_amount', 'updated_at'])
 
     @property

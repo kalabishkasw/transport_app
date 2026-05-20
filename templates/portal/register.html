@@ -12,8 +12,10 @@
             <p class="text-muted small mb-0">{{ T.register_sub }}</p>
         </div>
 
-        <form method="post">
+        <form method="post" autocomplete="on">
             {% csrf_token %}
+            {# honeypot: невидиме поле, заповнить лише бот #}
+            {{ form.website }}
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label small text-muted">{{ T.booking_lastname }}</label>
