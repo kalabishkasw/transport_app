@@ -120,7 +120,12 @@ class AutoUpdateTripStatusMiddleware:
                         # за кожним користувачем. Беремо тільки замовлення які
                         # переходять у COMPLETED (а не вже completed) і де ще
                         # не нараховано бали (loyalty_awarded_at__isnull=True).
-                        orders_to_complete = (
+                        # ВАЖЛИВО: матеріалізую queryset через list() ПЕРЕД тим
+                        # як викликати .update() нижче. без list() queryset lazy
+                        # і виконується лише у `for row in orders_to_complete` -
+                        # на той момент loyalty_awarded_at вже заповнено, тому
+                        # фільтр isnull=True дасть 0 рядків і бали не нарахуються.
+                        orders_to_complete = list(
                             Order.objects
                             .filter(
                                 trip=trip,

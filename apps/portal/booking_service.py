@@ -220,6 +220,10 @@ def create_booking(
     # замість одного). signals.recalc_order_total_on_save при bulk_create
     # не викликається - тому далі робимо recalculate_total вручну.
     # ціна тепер пропорційна до сегмента (не повного маршруту).
+    # ticket_number має unique=True, тому при bulk_create нам треба унікальні
+    # тимчасові значення (інакше два порожні '' порушують unique constraint).
+    # використовую uuid як тимчасовий placeholder, потім переписую на TK-YYYY-NNNN.
+    import uuid
     segment_price = calculate_segment_price(trip, boarding_stop, alighting_stop)
     ticket_objects = [
         Ticket(
@@ -234,19 +238,20 @@ def create_booking(
             alighting_stop=alighting_stop,
             price=segment_price,
             status=Ticket.Status.BOOKED,
+            # тимчасовий унікальний номер - переписую після створення коли отримаю pk
+            ticket_number=f'TMP-{uuid.uuid4().hex[:16]}',
         )
         for pd in passengers
     ]
     created_tickets = Ticket.objects.bulk_create(ticket_objects)
-    # bulk_create не викликає save() на кожному квитку, тому ticket_number
-    # лишається порожнім. Заповнюємо його одним апдейтом.
+    # тепер переписую тимчасові номери на нормальні TK-YYYY-NNNN на основі pk
     from datetime import datetime
     year = datetime.now().year
     for t in created_tickets:
-        if not t.ticket_number and t.pk:
+        if t.pk:
             t.ticket_number = f'TK-{year}-{t.pk:06d}'
     Ticket.objects.bulk_update(
-        [t for t in created_tickets if t.pk and t.ticket_number],
+        [t for t in created_tickets if t.pk],
         ['ticket_number'],
     )
     # один перерахунок суми замість N

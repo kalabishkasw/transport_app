@@ -229,6 +229,11 @@ LOGIN_REDIRECT_URL = '/account/'
 LOGOUT_REDIRECT_URL = '/'
 
 
+# кастомний test runner з кольоровим виводом і великим [OK]/[FAILED] банером
+# після всіх тестів. простіше зрозуміти результат у консолі.
+TEST_RUNNER = 'apps.core.test_runner.ColorfulDjangoRunner'
+
+
 #  Email
 # бекенд читається з env. У розробці типово 'console' (листи у термінал),
 # у production - 'smtp' з реальними реквізитами.
@@ -280,8 +285,10 @@ EUR_TO_UAH_FIXED = os.getenv('EUR_TO_UAH_FIXED', '51.5')
 # реальна кількість квитків у базі множиться на ці значення,
 # щоб не показувати голу цифру для свіжо-заповненої демо-БД.
 # для production бажано виставити LANDING_PASSENGER_MULTIPLIER=1.
-LANDING_PASSENGER_MULTIPLIER = int(os.getenv('LANDING_PASSENGER_MULTIPLIER', '17'))
-LANDING_PASSENGER_FLOOR = int(os.getenv('LANDING_PASSENGER_FLOOR', '12500'))
+# множник 5 + ~37k реальних квитків дає ~190k - реалістично для невеликої
+# транспортної компанії з 10 автобусами на пасажирських маршрутах.
+LANDING_PASSENGER_MULTIPLIER = int(os.getenv('LANDING_PASSENGER_MULTIPLIER', '5'))
+LANDING_PASSENGER_FLOOR = int(os.getenv('LANDING_PASSENGER_FLOOR', '50000'))
 LANDING_TRIPS_PER_MONTH_FLOOR = int(os.getenv('LANDING_TRIPS_PER_MONTH_FLOOR', '120'))
 LANDING_ROUTES_FLOOR = int(os.getenv('LANDING_ROUTES_FLOOR', '25'))
 LANDING_CITIES_FLOOR = int(os.getenv('LANDING_CITIES_FLOOR', '40'))
@@ -347,6 +354,9 @@ CSP_IMG_SRC = (
     'data:',
     'https://cdn.jsdelivr.net',
     'https://flagcdn.com',
+    # CartoDB tiles використовує піддомени a/b/c/d.basemaps.cartocdn.com,
+    # тому потрібен wildcard. без нього карти на проді не завантажують tiles.
+    'https://*.basemaps.cartocdn.com',
     'https://basemaps.cartocdn.com',
     'https://*.tile.openstreetmap.org',
     'https://images.unsplash.com',
@@ -356,6 +366,11 @@ CSP_CONNECT_SRC = (
     "'self'",
     'https://router.project-osrm.org',
     'https://api.open-meteo.com',
+    # source maps браузерів намагаються підвантажити .map файли через fetch,
+    # це йде через connect-src а не script-src. без цього у консолі сипляться
+    # CSP-warning-и про bootstrap.min.css.map, leaflet.js.map тощо.
+    'https://cdn.jsdelivr.net',
+    'https://unpkg.com',
 )
 CSP_FRAME_ANCESTORS = ("'none'",)
 

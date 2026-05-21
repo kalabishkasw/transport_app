@@ -150,13 +150,20 @@ def home(request):
     # маркетингові цифри для лендінгу. реальне значення * множник, але не нижче
     # підлоги. множники і підлоги налаштовуються через env (див. settings).
     real_passengers = Ticket.objects.filter(status__in=['paid', 'used', 'booked']).count()
+    # "рейсів на місяць" - рахую за календарні 30 днів НАЗАД від сьогодні.
+    # без верхньої межі фільтр захоплював би всі майбутні рейси теж і число
+    # ставало нереалістично великим (наприклад 817 замість ~180).
+    now = timezone.now()
     stats = {
         'passengers_total': max(
             real_passengers * django_settings.LANDING_PASSENGER_MULTIPLIER,
             django_settings.LANDING_PASSENGER_FLOOR,
         ),
         'trips_per_month': (
-            Trip.objects.filter(departure_at__gte=timezone.now() - timedelta(days=30)).count()
+            Trip.objects.filter(
+                departure_at__gte=now - timedelta(days=30),
+                departure_at__lt=now,
+            ).count()
             or django_settings.LANDING_TRIPS_PER_MONTH_FLOOR
         ),
         'routes_count': (
