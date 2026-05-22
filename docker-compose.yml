@@ -1,0 +1,63 @@
+# compose-конфіг для локального запуску TransAuto Travel.
+# піднімає одною командою: gunicorn-сервіс web + postgres БД.
+# користувач робить "docker compose up --build" і все працює.
+
+services:
+  # сервіс django/gunicorn
+  web:
+    build: .
+    container_name: transauto_web
+    # пробрасую порт 8000 з контейнера на хост
+    ports:
+      - "8000:8000"
+    # читаю змінні з .env.docker (окремий файл щоб не плутати з локальним .env)
+    env_file:
+      - .env.docker
+    # перевизначаю DATABASE_URL щоб web ходив у внутрішній сервіс db
+    # (а не у локальний postgres на хості)
+    environment:
+      DATABASE_URL: postgres://transport:transport@db:5432/transport_db
+    # web стартує тільки коли postgres готовий приймати з'єднання
+    depends_on:
+      db:
+        condition: service_healthy
+    # монтую код для гарячого перезавантаження під час розробки.
+    # коли робите docker build для production - закоментуйте volumes.
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    # за замовчанням gunicorn з Dockerfile. для розробки можна перевизначити:
+    # command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+
+  # сервіс postgresql
+  db:
+    # postgres 17 LTS (та сама версія яку використовує Render).
+    # postgres:18 потребує іншу схему монтування volume і ламає сумісність.
+    image: postgres:17-alpine
+    container_name: transauto_db
+    environment:
+      POSTGRES_USER: transport
+      POSTGRES_PASSWORD: transport
+      POSTGRES_DB: transport_db
+    # пробрасую 5433 на хості -> 5432 у контейнері.
+    # 5433 щоб не конфліктувати з локальним postgres (який зазвичай на 5432).
+    # для підключення через DBeaver/pgAdmin з хоста: localhost:5433, user/pass transport/transport
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # healthcheck потрібен щоб web чекав на готову БД
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transport -d transport_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+# іменовані volumes щоб дані БД і статика не зникали при docker compose down
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:

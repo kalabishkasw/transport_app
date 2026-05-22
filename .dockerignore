@@ -1,0 +1,54 @@
+# віртуальне середовище (всередині контейнера встановлюю залежності з нуля)
+.venv/
+venv/
+env/
+
+# python кеш
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# django runtime
+*.sqlite3
+db.sqlite3
+/media/
+/staticfiles/
+local_settings.py
+
+# env файли (передаю через docker-compose)
+.env
+.env.local
+.env.*
+!.env.example
+
+# логи і тимчасові
+*.log
+*.bak
+*.tmp
+requirements.actual.txt
+
+# render
+.render/
+
+# docker (сам контейнер не повинен бачити ці файли)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# дипломна документація
+*.md
+!README.md

@@ -76,6 +76,48 @@ $env:PYTHONIOENCODING = 'utf-8'
 - `http://127.0.0.1:8000/manage/` диспетчерська (логін як superuser),
 - `http://127.0.0.1:8000/admin/` Django admin.
 
+## Запуск через Docker
+
+Альтернатива локальному встановленню. Потрібно тільки Docker Desktop, Python і PostgreSQL встановлювати на хост не треба.
+
+```bash
+cd transport_app
+docker compose up --build
+```
+
+Одна команда збирає образ Django-застосунку і піднімає два контейнери: `transauto_web` (gunicorn на 8000) і `transauto_db` (PostgreSQL 17). Перший запуск ~5-10 хв, далі ~10 сек.
+
+У другому терміналі залити демо-дані:
+
+```bash
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py seed_demo_data --reset
+docker compose exec web python manage.py seed_bookings --reset
+docker compose exec web python manage.py seed_reviews
+docker compose exec web python manage.py seed_companies
+docker compose exec web python manage.py update_trip_statuses
+docker compose exec web python manage.py redistribute_order_dates
+docker compose exec web python manage.py fill_recent_bookings
+docker compose exec web python manage.py backfill_loyalty
+```
+
+Прогнати тести:
+
+```bash
+docker compose exec web python manage.py test
+```
+
+Відкрити сайт: `http://localhost:8000`. PostgreSQL прослуховує `localhost:5433` для підключення з хоста (наприклад DBeaver), користувач і пароль обидва `transport`.
+
+Зупинка:
+
+```bash
+docker compose down       # дані БД зберігаються
+docker compose down -v    # повністю стерти (volumes теж)
+```
+
+Env-змінні для контейнера у `.env.docker` (dev-секрет, не для production). `render.yaml` має `runtime: python`, тож Render ігнорує Dockerfile і деплоїться як раніше через pip.
+
 ## Демо-дані
 
 Залити порожню БД даними для презентації (10 водіїв, 10 ТЗ, 17 маршрутів, ~1490 рейсів, ~23k замовлень, ~37k квитків):
