@@ -160,7 +160,7 @@ class Order(models.Model):
         decimal_places=2,
         default=0,
         verbose_name='Використано балами',
-        help_text='Сума, оплачена бонусними балами (1 бал = 1 EUR).',
+        help_text='Сума знижки у EUR оплачена бонусними балами. курс 10 балів = 1 EUR.',
     )
 
     notes = models.TextField(blank=True, verbose_name='Примітки')

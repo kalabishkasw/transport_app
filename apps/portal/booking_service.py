@@ -46,8 +46,7 @@ def calculate_segment_price(trip, boarding_stop, alighting_stop):
     """
     # перевіряю чи це "повний" сегмент: посадка у тому ж місті що перша can_board
     # зупинка маршруту і висадка у тому ж місті що остання can_alight.
-    # порівнюю саме за містом (не за pk), бо у місті може бути кілька автовокзалів:
-    # Львів-Підзамче і Львів-Головний - все одно це "Львів" з точки зору тарифу.
+    # порівнюю саме за містом (не за pk), бо у місті може бути кілька автовокзалів
     all_stops = list(trip.route.stops.all().order_by('order'))
     first_boarding = next((s for s in all_stops if s.can_board), None)
     last_alighting = next((s for s in reversed(all_stops) if s.can_alight), None)
@@ -112,7 +111,8 @@ def create_booking(
     promo_code_input : str
         Введений код. Якщо знайдено активний - застосовується.
     use_loyalty_points : int
-        Скільки балів використати (1 бал = 1 EUR, максимум 50% суми).
+        Скільки балів використати. курс 10 балів = 1 EUR знижки.
+        максимум - 50% від суми замовлення у EUR.
 
     повертає
     --------
@@ -265,20 +265,28 @@ def create_booking(
     # 9. лояльність: оновлюємо суму і списуємо бали користувача.
     # тримаю використані бали окремим полем (loyalty_redeemed_amount),
     # щоб повторний recalculate_total не стер їх (він знає про це поле).
+    # курс: LOYALTY_REDEEM_RATE балів = 1 EUR знижки. за замовчуванням 10.
     if use_loyalty_points > 0 and user is not None and user.is_authenticated:
         from django.conf import settings as django_settings
         order.refresh_from_db(fields=['total_price', 'discount_amount', 'loyalty_redeemed_amount'])
         available_points = max(0, int(user.loyalty_points or 0))
         max_redeem_ratio = getattr(django_settings, 'LOYALTY_MAX_REDEEM_RATIO', Decimal('0.5'))
-        max_redeem = int(order.total_price * max_redeem_ratio)
-        used = min(use_loyalty_points, available_points, max_redeem)
-        if used > 0:
-            order.loyalty_redeemed_amount = (order.loyalty_redeemed_amount or Decimal('0')) + Decimal(used)
-            order.total_price = order.total_price - Decimal(used)
+        redeem_rate = getattr(django_settings, 'LOYALTY_REDEEM_RATE', Decimal('10'))
+        # максимум знижки у EUR (50% від суми замовлення)
+        max_redeem_eur = int(order.total_price * max_redeem_ratio)
+        # переводжу межу у бали через курс
+        max_redeem_points = int(max_redeem_eur * redeem_rate)
+        # фактично використано балів - не більше ніж бажано/є/дозволено
+        used_points = min(use_loyalty_points, available_points, max_redeem_points)
+        if used_points > 0:
+            # знижка у EUR = бали / курс. наприклад 25 балів / 10 = 2.50 EUR
+            discount_eur = (Decimal(used_points) / redeem_rate).quantize(Decimal('0.01'))
+            order.loyalty_redeemed_amount = (order.loyalty_redeemed_amount or Decimal('0')) + discount_eur
+            order.total_price = order.total_price - discount_eur
             order.save(update_fields=['loyalty_redeemed_amount', 'total_price', 'updated_at'])
             # перечитуємо користувача під замком, щоб не списати двічі.
             locked_user = User.objects.select_for_update().get(pk=user.pk)
-            locked_user.loyalty_points = max(0, (locked_user.loyalty_points or 0) - used)
+            locked_user.loyalty_points = max(0, (locked_user.loyalty_points or 0) - used_points)
             locked_user.save(update_fields=['loyalty_points'])
             # синхронізуємо у пам'яті теж.
             user.loyalty_points = locked_user.loyalty_points

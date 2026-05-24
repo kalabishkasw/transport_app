@@ -255,12 +255,17 @@ SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@transauto.travel')
 
 
 #  бізнес-константи: бонусна програма
-# 1 EUR суми завершеного замовлення = 1 бал лояльності.
+# 1 EUR суми завершеного замовлення = 1 бал лояльності (нарахування).
+# 10 балів = 1 EUR знижки при оплаті (списання).
 # Бали можна списати при оплаті, але не більше LOYALTY_MAX_REDEEM_RATIO * total_price.
 
 from decimal import Decimal as _Decimal
 
 LOYALTY_POINTS_PER_EUR = 1
+# курс конвертації балів у знижку: 10 балів = 1 EUR знижки.
+# тобто 1 бал = 0.10 EUR при списанні. так програма лояльності більш стримана:
+# щоб отримати знижку у 1 EUR треба здійснити поїздок на 10 EUR.
+LOYALTY_REDEEM_RATE = _Decimal('10')
 LOYALTY_MAX_REDEEM_RATIO = _Decimal('0.5')  # макс. 50% від суми замовлення балами
 LOYALTY_LEVELS = [
     # (назва, мін. кількість балів, hex-колір градієнту картки)
@@ -282,11 +287,7 @@ EUR_TO_UAH_FIXED = os.getenv('EUR_TO_UAH_FIXED', '51.5')
 
 
 # маркетингові статистики на лендінгу.
-# реальна кількість квитків у базі множиться на ці значення,
-# щоб не показувати голу цифру для свіжо-заповненої демо-БД.
-# для production бажано виставити LANDING_PASSENGER_MULTIPLIER=1.
-# множник 5 + ~37k реальних квитків дає ~190k - реалістично для невеликої
-# транспортної компанії з 10 автобусами на пасажирських маршрутах.
+# множник 5 + ~37k реальних квитків дає ~190k - реалістично
 LANDING_PASSENGER_MULTIPLIER = int(os.getenv('LANDING_PASSENGER_MULTIPLIER', '5'))
 LANDING_PASSENGER_FLOOR = int(os.getenv('LANDING_PASSENGER_FLOOR', '50000'))
 LANDING_TRIPS_PER_MONTH_FLOOR = int(os.getenv('LANDING_TRIPS_PER_MONTH_FLOOR', '120'))

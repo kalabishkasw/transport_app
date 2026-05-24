@@ -467,22 +467,28 @@ class CreateBookingTests(TestCase):
         self.assertEqual(promo.times_used, 6)
 
     def test_loyalty_redemption_capped_at_50_percent(self):
-        """навіть якщо у користувача багато балів - max 50% від total_price."""
+        """навіть якщо у користувача багато балів - max 50% від total_price.
+        курс 10 балів = 1 EUR. 45 EUR * 50% = 22 EUR = 220 балів максимум."""
         self.user.loyalty_points = 1000
         self.user.save()
         order = self._book(user=self.user, use_loyalty_points=1000)
-        # 45 * 50% = 22 (int), тобто максимум 22 EUR можна списати
-        self.assertEqual(order.loyalty_redeemed_amount, Decimal('22'))
-        self.assertEqual(order.total_price, Decimal('23'))  # 45 - 22
+        # max знижка 22 EUR = 220 балів використано, знижка 22.00 EUR
+        self.assertEqual(order.loyalty_redeemed_amount, Decimal('22.00'))
+        self.assertEqual(order.total_price, Decimal('23.00'))  # 45 - 22
+        # 220 балів списано з 1000 -> залишилось 780
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.loyalty_points, 780)
 
     def test_loyalty_redemption_capped_at_user_balance(self):
-        """списується не більше ніж у користувача на балансі."""
+        """списується не більше ніж у користувача на балансі.
+        курс 10 балів = 1 EUR. 10 балів = 1 EUR знижки."""
         self.user.loyalty_points = 10
         self.user.save()
         order = self._book(user=self.user, use_loyalty_points=100)
-        self.assertEqual(order.loyalty_redeemed_amount, Decimal('10'))
-        self.assertEqual(order.total_price, Decimal('35'))
-        # перевіряю що баланс реально списався
+        # доступно 10 балів = 1.00 EUR знижки
+        self.assertEqual(order.loyalty_redeemed_amount, Decimal('1.00'))
+        self.assertEqual(order.total_price, Decimal('44.00'))  # 45 - 1
+        # перевіряю що баланс реально списався (всі 10 балів)
         self.user.refresh_from_db()
         self.assertEqual(self.user.loyalty_points, 0)
 

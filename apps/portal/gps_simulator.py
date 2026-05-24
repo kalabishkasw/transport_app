@@ -88,7 +88,6 @@ def simulate_position(trip, demo_mode: bool = False) -> Optional[GpsPosition]:
 
     if demo_mode:
         # прискорене програвання: 1 секунда реального часу = 10 хвилин поїздки.
-        # тобто 6-годинна поїздка програється за 36 секунд, 10-годинна за 60 сек.
         # цикл повторюється кожні total_minutes/10 секунд.
         seconds_now = int(now.timestamp())
         delta = float((seconds_now * 10) % total_minutes)

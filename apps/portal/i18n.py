@@ -87,7 +87,7 @@ TRANSLATIONS = {
         'booking_summary': 'До сплати',
         'booking_loyalty': 'Бонусні бали',
         'booking_loyalty_avail': 'Доступно',
-        'booking_loyalty_help': '1 бал = 1 EUR знижки (макс. 50% суми).',
+        'booking_loyalty_help': '10 балів = 1 EUR знижки (макс. 50% суми).',
         'booking_loyalty_use': 'Скільки балів використати',
 
         # Підтвердження
@@ -339,7 +339,7 @@ TRANSLATIONS = {
         'bf_promo_label': 'Промокод (за наявності)',
         'bf_loyalty_section': 'Бонусні бали',
         'bf_loyalty_available': 'Доступно',
-        'bf_loyalty_hint': 'балів. 1 бал = 1 EUR знижки (макс. 50% суми).',
+        'bf_loyalty_hint': 'балів. 10 балів = 1 EUR знижки (макс. 50% суми).',
         'bf_loyalty_input_ph': 'Скільки балів використати',
         'bf_total_word': 'Разом',
         'bf_submit_btn': 'Оформити замовлення',
@@ -403,7 +403,7 @@ TRANSLATIONS = {
 
         # Бонусна програма (loyalty.html)
         'lp_title': 'Бонусна програма',
-        'lp_subtitle': 'За кожну завершену поїздку нараховуються бали. 1 бал = 1 EUR знижки.',
+        'lp_subtitle': 'За кожну завершену поїздку нараховуються бали. 10 балів = 1 EUR знижки.',
         'lp_back': 'До кабінету',
         'lp_available': 'Доступно балів',
         'lp_for_sum': 'На суму',
@@ -821,7 +821,7 @@ TRANSLATIONS = {
         'bf_promo_label': 'Promo code (optional)',
         'bf_loyalty_section': 'Loyalty points',
         'bf_loyalty_available': 'Available',
-        'bf_loyalty_hint': 'points. 1 point = 1 EUR discount (max 50% of total).',
+        'bf_loyalty_hint': 'points. 10 points = 1 EUR discount (max 50% of total).',
         'bf_loyalty_input_ph': 'How many points to use',
         'bf_total_word': 'Total',
         'bf_submit_btn': 'Place booking',
@@ -885,7 +885,7 @@ TRANSLATIONS = {
 
         # Loyalty (loyalty.html)
         'lp_title': 'Loyalty program',
-        'lp_subtitle': 'Each completed trip earns you points. 1 point = 1 EUR discount.',
+        'lp_subtitle': 'Each completed trip earns you points. 10 points = 1 EUR discount.',
         'lp_back': 'Back to account',
         'lp_available': 'Points available',
         'lp_for_sum': 'Worth',

@@ -829,7 +829,7 @@ def payment_process(request, order_id):
     POST-обробник псевдо-оплати. Перевіряє "номер картки" (мінімальна валідація),
     переводить замовлення у PAID, квитки у PAID, ставить paid_at = now.
 
-    Це mock! Реальна інтеграція з LiqPay/Stripe потребує API-ключів, callback-URL,
+    Це mock. реальна інтеграція з LiqPay/Stripe потребує API-ключів, callback-URL,
     верифікації підпису, обробки webhook про результат платежу.
 
     при помилці валідації не редиректжу, а рендерю payment_form.html з помилками
